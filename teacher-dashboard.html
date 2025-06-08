@@ -194,6 +194,14 @@
                 }
             };
 
+            const handleAideClick = () => {
+                window.location.href = 'aideens.html';
+            };
+
+            const handleLogout = () => {
+                window.location.href = 'choix.html';
+            };
+
             const sections = {
                 messagerie: (
                     <div class="p-6 fade-in full-height">
@@ -340,7 +348,10 @@
                                 <button
                                     key={section}
                                     className={`w-full text-left py-2.5 px-4 rounded transition duration-200 hover:bg-purple-700 ${activeSection === section ? 'bg-purple-700' : ''}`}
-                                    onClick={() => setActiveSection(section)}
+                                    onClick={() => {
+                                        setActiveSection(section);
+                                        if (window.innerWidth < 768) setIsSidebarOpen(false); // Masquer la sidebar sur mobile après clic
+                                    }}
                                 >
                                     {section === 'messagerie' ? 'Messagerie 💬' :
                                      section === 'documents' ? 'Documents 📄' :
@@ -349,7 +360,14 @@
                                      'Aide ❓'}
                                 </button>
                             ))}
-                            <a href="choix.html" class="w-full text-left py-2.5 px-4 rounded transition bg-red-600 hover:bg-red-500 block">
+                            <a
+                                href="choix.html"
+                                class="w-full text-left py-2.5 px-4 rounded transition bg-red-600 hover:bg-red-500 block"
+                                onClick={() => {
+                                    handleLogout();
+                                    if (window.innerWidth < 768) setIsSidebarOpen(false); // Masquer la sidebar sur mobile après clic
+                                }}
+                            >
                                 Déconnexion 🚪
                             </a>
                         </nav>
