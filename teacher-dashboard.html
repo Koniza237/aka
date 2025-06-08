@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="FARENOUNIVERSITY.jpg" type="image/x-icon">
+    <title>Tableau de Bord Enseignant - Fareno University</title>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.15/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #background-image {
+            background-size: 200% 200%;
+            animation: gradientShift 15s ease-in-out infinite;
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        #root {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+        }
+        .fade-in {
+            animation: fadeIn 1s ease-in-out;
+        }
+        .bounce {
+            animation: bounce 1.5s infinite;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .hover-effect {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .hover-effect:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        .message-bubble {
+            max-width: 70%;
+            padding: 10px 15px;
+            margin: 5px 10px;
+            border-radius: 15px;
+            word-wrap: break-word;
+            background-color: #FFFFFF;
+            align-self: flex-start;
+        }
+        .full-height {
+            min-height: calc(100vh - 4rem);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex" id="background">
+    <div id="background-image"></div>
+    <div id="root" class="w-full"></div>
+    <div class="absolute top-4 left-4 text-white text-lg bounce">👩‍🏫</div>
+    <div class="fixed bottom-4 right-4 text-white text-sm">01:17 AM WAT, Dimanche 08 Juin 2025</div>
+
+    <script type="text/babel">
+        function TeacherDashboard() {
+            const [activeSection, setActiveSection] = React.useState('messagerie');
+            const [isSidebarOpen, setIsSidebarOpen] = React.useState(false); // Masqué par défaut sur mobile
+            const [messages, setMessages] = React.useState([]);
+            const [documents, setDocuments] = React.useState([]);
+            const [constraints, setConstraints] = React.useState([]);
+            const [aiInput, setAiInput] = React.useState('');
+            const [aiResponse, setAiResponse] = React.useState('');
+            const [aiError, setAiError] = React.useState('');
+            const [aiLoading, setAiLoading] = React.useState(false);
+            const [timeSpent, setTimeSpent] = React.useState(0);
+            const [isOnline, setIsOnline] = React.useState(navigator.onLine);
+
+            React.useEffect(() => {
+                const startTime = Date.now();
+                const timer = setInterval(() => {
+                    const seconds = Math.floor((Date.now() - startTime) / 1000);
+                    setTimeSpent(seconds);
+                }, 1000);
+
+                fetchMessages();
+                fetchDocuments();
+                fetchConstraints();
+
+                const handleOnline = () => setIsOnline(true);
+                const handleOffline = () => setIsOnline(false);
+                window.addEventListener('online', handleOnline);
+                window.addEventListener('offline', handleOffline);
+
+                return () => {
+                    clearInterval(timer);
+                    window.removeEventListener('online', handleOnline);
+                    window.removeEventListener('offline', handleOffline);
+                };
+            }, []);
+
+            const formatTime = (seconds) => {
+                const hrs = Math.floor(seconds / 3600);
+                const mins = Math.floor((seconds % 3600) / 60);
+                const secs = seconds % 60;
+                return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            };
+
+            const fetchMessages = async () => {
+                try {
+                    const response = await fetch('/api/messages-ens');
+                    if (!response.ok) throw new Error('Erreur lors du chargement des messages');
+                    const data = await response.json();
+                    const formattedMessages = data.map((msg, index) => ({
+                        ...msg,
+                        id: index,
+                        timestamp: msg.timestamp || new Date().toISOString()
+                    }));
+                    setMessages(formattedMessages);
+                } catch (err) {
+                    console.error('Erreur lors du chargement des messages:', err);
+                }
+            };
+
+            const fetchDocuments = async () => {
+                try {
+                    const response = await fetch('/api/documents');
+                    if (!response.ok) throw new Error('Erreur lors du chargement des documents');
+                    const data = await response.json();
+                    setDocuments(data);
+                } catch (err) {
+                    console.error('Erreur lors du chargement des documents:', err);
+                }
+            };
+
+            const fetchConstraints = async () => {
+                try {
+                    const response = await fetch('/api/constraints');
+                    if (!response.ok) throw new Error('Erreur lors du chargement des contraintes');
+                    const data = await response.json();
+                    setConstraints(data);
+                } catch (err) {
+                    console.error('Erreur lors du chargement des contraintes:', err);
+                }
+            };
+
+            const handleDownload = async (documentId, documentName) => {
+                try {
+                    const response = await fetch(`/api/documents/${documentId}/download`);
+                    if (!response.ok) throw new Error('Erreur lors du téléchargement');
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = documentName;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                } catch (err) {
+                    console.error('Erreur lors du téléchargement:', err);
+                }
+            };
+
+            const handleAiSubmit = async (e) => {
+                e.preventDefault();
+                if (!aiInput.trim()) return;
+                if (!isOnline) {
+                    setAiError('L\'IA ne peut pas répondre car vous n\'êtes pas connecté à Internet.');
+                    return;
+                }
+                setAiLoading(true);
+                setAiError('');
+                setAiResponse('');
+                try {
+                    const response = await fetch('/api/ai', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt: aiInput })
+                    });
+                    if (!response.ok) throw new Error('Erreur API');
+                    const data = await response.json();
+                    setAiResponse(data.response);
+                } catch (error) {
+                    setAiError('Erreur: ' + error.message);
+                } finally {
+                    setAiLoading(false);
+                }
+            };
+
+            const sections = {
+                messagerie: (
+                    <div class="p-6 fade-in full-height">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">Messagerie 💬</h2>
+                        <div class="chat-area bg-gray-100 p-6 rounded-lg shadow-md h-[calc(100vh-12rem)] overflow-y-auto">
+                            {messages.length > 0 ? (
+                                messages.map(msg => (
+                                    <div key={msg.id} class="message-bubble">
+                                        <div>{msg.content}</div>
+                                        <div class="text-xs text-gray-500 mt-1">
+                                            Reçu le {new Date(msg.timestamp).toLocaleString('fr-FR')}
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div class="text-center text-gray-500 mt-4">
+                                    Aucun message reçu.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ),
+                documents: (
+                    <div class="p-6 fade-in full-height">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">Documents 📄</h2>
+                        <div class="mt-4">
+                            <h3 class="text-lg font-semibold mb-2">Liste des Documents</h3>
+                            <table class="w-full bg-white rounded-lg shadow-md">
+                                <thead>
+                                    <tr class="bg-purple-900 text-white">
+                                        <th class="p-3 text-left">Titre</th>
+                                        <th class="p-3 text-left">Catégorie</th>
+                                        <th class="p-3 text-left">Nom du Fichier</th>
+                                        <th class="p-3 text-left">Ajouté par</th>
+                                        <th class="p-3 text-left">Date d'Ajout</th>
+                                        <th class="p-3 text-left">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {documents.length > 0 ? (
+                                        documents.map(doc => (
+                                            <tr key={doc.id} class="border-b">
+                                                <td class="p-3">{doc.title}</td>
+                                                <td class="p-3">{doc.category}</td>
+                                                <td class="p-3">{doc.fileName}</td>
+                                                <td class="p-3">{doc.uploadedBy}</td>
+                                                <td class="p-3">{doc.uploadDate}</td>
+                                                <td class="p-3">
+                                                    <button
+                                                        class="bg-green-500 text-white px-4 py-1 rounded hover:bg-green-600 hover-effect"
+                                                        onClick={() => handleDownload(doc.id, doc.fileName)}
+                                                    >
+                                                        Télécharger
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="6" class="p-3 text-center text-gray-500">
+                                                Aucun document disponible
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                ),
+                ia: (
+                    <div class="p-6 fade-in full-height">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">Assistant IA 🤖</h2>
+                        <form onSubmit={handleAiSubmit} class="space-y-4">
+                            <textarea
+                                placeholder="Posez une question..."
+                                class="border p-4 rounded w-full h-32 bg-gray-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                value={aiInput}
+                                onChange={(e) => setAiInput(e.target.value)}
+                            ></textarea>
+                            <button
+                                type="submit"
+                                class="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover-effect hover:bg-purple-700"
+                                disabled={aiLoading}
+                            >
+                                {aiLoading ? 'Chargement...' : 'Envoyer'}
+                            </button>
+                        </form>
+                        {aiResponse && (
+                            <div class="mt-4 bg-green-50 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold text-green-600">Réponse:</h3>
+                                <p>{aiResponse}</p>
+                            </div>
+                        )}
+                        {aiError && (
+                            <div class="mt-4 bg-red-50 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold text-red-600">Erreur:</h3>
+                                <p>{aiError}</p>
+                            </div>
+                        )}
+                    </div>
+                ),
+                contraintes: (
+                    <div class="p-6 fade-in full-height">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">Contraintes ⏰</h2>
+                        <div class="bg-white p-6 rounded-lg shadow-md">
+                            {constraints.length > 0 ? (
+                                <ul class="text-gray-600 space-y-2">
+                                    {constraints.map((constraint, index) => (
+                                        <li key={index}>
+                                            {constraint.day} {constraint.time.length === 5 ? constraint.time + ':00' : constraint.time} : {constraint.type} ({constraint.resource})
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p class="text-gray-500">Aucune contrainte chargée.</p>
+                            )}
+                        </div>
+                    </div>
+                ),
+                aide: (
+                    <div class="p-6 fade-in full-height">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">Aide ❓</h2>
+                        <div class="bg-white p-6 rounded-lg shadow-md">
+                            <p class="mb-4">Recommandations pour les enseignants :</p>
+                            <ul class="text-gray-600 space-y-2">
+                                <li>Consultez régulièrement les contraintes et les documents 📄.</li>
+                                <li>Utilisez l'assistant IA 🤖 pour planifier vos cours.</li>
+                                <li>Contactez le support via la messagerie 💬 en cas de besoin.</li>
+                            </ul>
+                            <a href="aideens.html" class="mt-4 inline-block bg-purple-600 text-white py-2 px-4 rounded-lg hover-effect hover:bg-purple-700">
+                                Accéder au Guide
+                            </a>
+                        </div>
+                    </div>
+                )
+            };
+
+            return (
+                <div class="flex min-h-screen w-full">
+                    <div class={`sidebar bg-purple-900 text-white w-64 space-y-6 py-7 px-2 fixed inset-y-0 left-0 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 transition duration-200 ease-in-out z-20`}>
+                        <h1 class="text-2xl font-bold text-center">Fareno University</h1>
+                        <nav>
+                            {['messagerie', 'documents', 'ia', 'contraintes', 'aide'].map(section => (
+                                <button
+                                    key={section}
+                                    className={`w-full text-left py-2.5 px-4 rounded transition duration-200 hover:bg-purple-700 ${activeSection === section ? 'bg-purple-700' : ''}`}
+                                    onClick={() => setActiveSection(section)}
+                                >
+                                    {section === 'messagerie' ? 'Messagerie 💬' :
+                                     section === 'documents' ? 'Documents 📄' :
+                                     section === 'ia' ? 'Assistant IA 🤖' :
+                                     section === 'contraintes' ? 'Contraintes ⏰' :
+                                     'Aide ❓'}
+                                </button>
+                            ))}
+                            <a href="choix.html" class="w-full text-left py-2.5 px-4 rounded transition bg-red-600 hover:bg-red-500 block">
+                                Déconnexion 🚪
+                            </a>
+                        </nav>
+                    </div>
+                    <div class="flex-1 flex flex-col w-full">
+                        <header class="bg-purple-900 text-white p-4 flex justify-between items-center">
+                            <div class="flex items-center">
+                                <button class="md:hidden text-white focus:outline-none" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                                    </svg>
+                                </button>
+                                <h1 class="text-xl font-bold ml-4">Tableau de Bord Enseignant</h1>
+                            </div>
+                            <div class="flex items-center space-x-4">
+                                <div>Temps passé : {formatTime(timeSpent)}</div>
+                            </div>
+                        </header>
+                        <main class="flex-1 p-4 w-full">{sections[activeSection]}</main>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<TeacherDashboard />, document.getElementById('root'));
+
+        const colors = [
+            'from-red-500 to-orange-600',
+            'from-orange-600 to-yellow-500',
+            'from-yellow-500 to-green-400',
+            'from-green-400 to-blue-500',
+            'from-blue-500 to-indigo-600',
+            'from-indigo-600 to-purple-600',
+            'from-purple-600 to-red-500'
+        ];
+
+        let colorIndex = 0;
+        const background = document.getElementById('background');
+
+        function changeBackgroundColor() {
+            background.className = `min-h-screen flex ${colors[colorIndex]}`;
+            colorIndex = (colorIndex + 1) % colors.length;
+        }
+
+        changeBackgroundColor();
+        setInterval(changeBackgroundColor, 10000);
+    </script>
+</body>
+</html>

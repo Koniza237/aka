@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aide Étudiant - Fareno University</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://kit.fontawesome.com/4a6b47f4c8.js" crossorigin="anonymous"></script>
+    <style>
+        #background-image {
+            background: linear-gradient(135deg, #1e3a8a, #6b7280, #1e3a8a);
+            background-size: 200% 200%;
+            animation: gradientShift 15s ease-in-out infinite;
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .section-card {
+            transition: all 0.3s ease;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        .section-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .section-card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+        }
+        .nav-sticky {
+            position: sticky;
+            top: 1rem;
+        }
+        .scroll-to-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 50;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .scroll-to-top.visible {
+            opacity: 1;
+        }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="background-image"></div>
+    <div class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="bg-white shadow-lg p-4 flex justify-between items-center z-10">
+            <div class="flex items-center">
+                <i class="fas fa-graduation-cap text-2xl text-blue-600 mr-2"></i>
+                <h1 class="text-xl font-bold text-gray-800">Aide Étudiant - Fareno University</h1>
+            </div>
+            <a href="student-dashboard.html" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200">
+                <i class="fas fa-arrow-left mr-2"></i>Retour au Tableau de Bord
+            </a>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-6 max-w-7xl mx-auto flex flex-col md:flex-row gap-6">
+            <!-- Sticky Navigation -->
+            <aside class="md:w-1/4">
+                <nav class="nav-sticky bg-white rounded-lg shadow-md p-4">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">Sections</h2>
+                    <ul class="space-y-2">
+                        <li><a href="#time-management" class="text-blue-600 hover:text-blue-800 flex items-center"><i class="fas fa-clock mr-2"></i>Gestion du Temps</a></li>
+                        <li><a href="#study-tips" class="text-blue-600 hover:text-blue-800 flex items-center"><i class="fas fa-book mr-2"></i>Conseils d'Étude</a></li>
+                        <li><a href="#resources" class="text-blue-600 hover:text-blue-800 flex items-center"><i class="fas fa-university mr-2"></i>Ressources</a></li>
+                        <li><a href="#wellbeing" class="text-blue-600 hover:text-blue-800 flex items-center"><i class="fas fa-heart mr-2"></i>Bien-être</a></li>
+                    </ul>
+                </nav>
+            </aside>
+
+            <!-- Content Sections -->
+            <div class="md:w-3/4 space-y-8">
+                <!-- Time Management -->
+                <section id="time-management" class="section-card bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-clock text-3xl text-blue-500 mr-4"></i>
+                        <h2 class="text-2xl font-bold text-gray-800">Gère ton Temps comme un Pro ! ⏰</h2>
+                    </div>
+                    <p class="text-gray-600 mb-4">Un bon emploi du temps, c'est la clé pour jongler entre cours, révisions et vie perso. Voici comment t'organiser :</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 bg-blue-50 rounded-lg">
+                            <h3 class="text-lg font-semibold text-blue-600">Planifie ta semaine</h3>
+                            <p class="text-gray-600">Utilise un agenda ou une app comme Notion pour noter tes cours, deadlines et moments de détente.</p>
+                        </div>
+                        <div class="p-4 bg-blue-50 rounded-lg">
+                            <h3 class="text-lg font-semibold text-blue-600">Priorise tes tâches</h3>
+                            <p class="text-gray-600">Classe tes tâches par urgence : exams en premier, Netflix en dernier !</p>
+                        </div>
+                        <div class="p-4 bg-blue-50 rounded-lg">
+                            <h3 class="text-lg font-semibold text-blue-600">Adopte le Pomodoro</h3>
+                            <p class="text-gray-600">Travaille 25 min, pause 5 min. Ça booste ta concentration et évite la fatigue.</p>
+                        </div>
+                        <div class="p-4 bg-blue-50 rounded-lg">
+                            <h3 class="text-lg font-semibold text-blue-600">Laisse de la marge</h3>
+                            <p class="text-gray-600">Prévoyez du temps pour les imprévus, comme un prof qui prolonge le cours.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Study Tips -->
+                <section id="study-tips" class="section-card bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-book text-3xl text-green-500 mr-4"></i>
+                        <h2 class="text-2xl font-bold text-gray-800">Étudie Malin, Pas Dur ! 📚</h2>
+                    </div>
+                    <p class="text-gray-600 mb-4">Réussir ses études, c'est une question de méthode. Voici des astuces pour apprendre efficacement :</p>
+                    <div class="space-y-4">
+                        <div class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 text-xl mr-3 mt-1"></i>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-700">Crée un espace zen</h3>
+                                <p class="text-gray-600">Un bureau rangé, loin de ton téléphone, pour te concentrer à 100 %.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 text-xl mr-3 mt-1"></i>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-700">Résume après chaque cours</h3>
+                                <p class="text-gray-600">Écris les points clés en tes propres mots pour mieux retenir.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 text-xl mr-3 mt-1"></i>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-700">Travaille en groupe</h3>
+                                <p class="text-gray-600">Rejoins des amis pour discuter des cours, ça aide à clarifier les concepts.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 text-xl mr-3 mt-1"></i>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-700">Utilise des ressources en ligne</h3>
+                                <p class="text-gray-600">YouTube, Khan Academy ou les docs du tableau de bord sont tes alliés.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Resources -->
+                <section id="resources" class="section-card bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-university text-3xl text-purple-500 mr-4"></i>
+                        <h2 class="text-2xl font-bold text-gray-800">Tout ce qu’il te faut à portée de main ! 🏫</h2>
+                    </div>
+                    <p class="text-gray-600 mb-4">Fareno met à ta disposition des outils et contacts pour réussir. Voici où les trouver :</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-4 bg-purple-50 rounded-lg">
+                            <h3 className="text-lg font-semibold text-purple-600">Section Documents</h3>
+                            <p className="text-gray-600">Télécharge les cours, syllabus et autres supports sur le tableau de bord.</p>
+                            <a href="student-dashboard.html#documents" className="text-blue-600 hover:underline">Y aller</a>
+                        </div>
+                        <div className="p-4 bg-purple-50 rounded-lg">
+                            <h3 className="text-lg font-semibold text-purple-600">Assistant IA</h3>
+                            <p className="text-gray-600">Pose des questions sur tes cours via l’IA intégrée pour des réponses rapides.</p>
+                            <a href="student-dashboard.html#ai" className="text-blue-600 hover:underline">Y aller</a>
+                        </div>
+                        <div className="p-4 bg-purple-50 rounded-lg">
+                            <h3 className="text-lg font-semibold text-purple-600">Messagerie</h3>
+                            <p className="text-gray-600">Reste à jour avec les annonces des profs dans la section Messagerie.</p>
+                            <a href="student-dashboard.html#messagerie" className="text-blue-600 hover:underline">Y aller</a>
+                        </div>
+                        <div className="p-4 bg-purple-50 rounded-lg">
+                            <h3 className="text-lg font-semibold text-purple-600">Support administratif</h3>
+                            <p className="text-gray-600">Pour toute question, contacte le secrétariat à <a href="mailto:support@fareno-univ.fr" className="text-blue-600 hover:underline">support@fareno-univ.fr</a>.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Wellbeing -->
+                <section id="wellbeing" class="section-card bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-heart text-3xl text-red-500 mr-4"></i>
+                        <h2 class="text-2xl font-bold text-gray-800">Prends soin de toi ! 🌟</h2>
+                    </div>
+                    <p class="text-gray-600 mb-4">Étudier, c’est un marathon, pas un sprint. Voici comment rester en forme et motivé :</p>
+                    <div class="space-y-4">
+                        <div class="flex items-start">
+                            <i class="fas fa-check-circle text-red-500 text-xl mr-3 mt-1"></i>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-700">Équilibre vie perso</h3>
+                                <p class="text-gray-600">Réserve du temps pour tes hobbies et tes proches.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-check-circle text-red-500 text-xl mr-3 mt-1"></i>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-700">Bouge ton corps</h3>
+                                <p class="text-gray-600">Une marche ou du sport réduit le stress et boost ton énergie.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-check-circle text-red-500 text-xl mr-3 mt-1"></i>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-700">Parle si ça coince</h3>
+                                <p class="text-gray-600">Un prof ou un conseiller est là pour t’aider. N’hésite pas !</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-check-circle text-red-500 text-xl mr-3"></i>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-700">Célèbre tes victoires</h3>
+                                <p class="text-gray-600">Un bon devoir rendu ? Offre-toi une pause ou un petit plaisir.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Scroll to Top Button -->
+        <button id="scroll-to-top" class="scroll-to-top bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition duration-200">
+            <i class="fas fa-arrow-up"></i>
+        </button>
+    </div>
+
+    <script>
+        // Animations des sections
+        const sections = document.querySelectorAll('.section-card');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+        sections.forEach(section => observer.observe(section));
+
+        // Scroll to top button
+        const scrollToTopBtn = document.querySelector('#scroll-to-top');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                scrollToTopBtn.classList.add('visible');
+            } else {
+                scrollToTopBtn.classList.remove('visible');
+            }
+        });
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    </script>
+</body>
+</html>

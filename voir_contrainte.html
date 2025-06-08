@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="FARENOUNIVERSITY.jpg" type="image/x-icon">
+    <title>Voir les Contraintes - Fareno University</title>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.15/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #background-image {
+            background: linear-gradient(135deg, #1e3a8a, #6b7280, #1e3a8a);
+            background-size: 200% 200%;
+            animation: gradientShift 15s ease-in-out infinite;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div id="background-image" class="fixed inset-0 z-0"></div>
+    <div id="root" class="relative z-10"></div>
+
+    <script type="text/babel">
+        function ConstraintsPage() {
+            const [constraints, setConstraints] = React.useState([]);
+            const [timeSpent, setTimeSpent] = React.useState(0);
+            const [showModal, setShowModal] = React.useState(false);
+            const [modalAction, setModalAction] = React.useState('');
+            const [currentConstraint, setCurrentConstraint] = React.useState({ id: '', resourceType: 'teacher', resource: '', day: '', time: '', type: '' });
+            const [teachers, setTeachers] = React.useState([]);
+            const [groups, setGroups] = React.useState([]);
+            const [rooms, setRooms] = React.useState([]);
+
+            React.useEffect(() => {
+                const startTime = Date.now();
+                const timer = setInterval(() => {
+                    const seconds = Math.floor((Date.now() - startTime) / 1000);
+                    setTimeSpent(seconds);
+                }, 1000);
+
+                fetchResources();
+                fetchConstraints();
+
+                return () => clearInterval(timer);
+            }, []);
+
+            const formatTime = (seconds) => {
+                const hrs = Math.floor(seconds / 3600);
+                const mins = Math.floor((seconds % 3600) / 60);
+                const secs = seconds % 60;
+                return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            };
+
+            const fetchResources = async () => {
+                try {
+                    const [teachersData, groupsData, roomsData] = await Promise.all([
+                        fetch('/api/resources/teachers').then(res => res.json()),
+                        fetch('/api/resources/groups').then(res => res.json()),
+                        fetch('/api/resources/rooms').then(res => res.json())
+                    ]);
+                    setTeachers(teachersData);
+                    setGroups(groupsData);
+                    setRooms(roomsData);
+                } catch (err) {
+                    console.error('Erreur lors du chargement des ressources:', err);
+                }
+            };
+
+            const fetchConstraints = async () => {
+                try {
+                    const response = await fetch('/api/constraints');
+                    if (!response.ok) throw new Error('Erreur lors du chargement');
+                    const data = await response.json();
+                    setConstraints(data);
+                } catch (err) {
+                    console.error('Erreur:', err);
+                    alert('Erreur lors du chargement: ' + err.message);
+                }
+            };
+
+            const openEditModal = (constraint) => {
+                setCurrentConstraint(constraint);
+                setModalAction('edit');
+                setShowModal(true);
+            };
+
+            const closeModal = () => {
+                setShowModal(false);
+                setModalAction('');
+                setCurrentConstraint({ id: '', resourceType: 'teacher', resource: '', day: '', time: '', type: '' });
+            };
+
+            const handleInputChange = (e) => {
+                const { name, value } = e.target;
+                setCurrentConstraint(prev => ({ ...prev, [name]: value }));
+            };
+
+            const updateConstraint = async (e) => {
+                e.preventDefault();
+                try {
+                    const response = await fetch(`/api/constraints/${currentConstraint.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            resourceType: currentConstraint.resourceType,
+                            resource: currentConstraint.resource,
+                            day: currentConstraint.day,
+                            time: currentConstraint.time,
+                            type: currentConstraint.type
+                        })
+                    });
+                    if (!response.ok) throw new Error('Erreur lors de la mise à jour');
+                    await fetchConstraints();
+                    closeModal();
+                } catch (err) {
+                    console.error('Erreur:', err);
+                    alert('Erreur lors de la mise à jour: ' + err.message);
+                }
+            };
+
+            const deleteConstraint = async (id) => {
+                if (!window.confirm('Voulez-vous vraiment supprimer cette contrainte ?')) return;
+                try {
+                    const response = await fetch(`/api/constraints/${id}`, {
+                        method: 'DELETE'
+                    });
+                    if (!response.ok) throw new Error('Erreur lors de la suppression');
+                    await fetchConstraints();
+                } catch (err) {
+                    console.error('Erreur:', err);
+                    alert('Erreur lors de la suppression: ' + err.message);
+                }
+            };
+
+            return (
+                <div className="min-h-screen">
+                    <header className="bg-white shadow-md p-4 flex justify-between items-center">
+                        <h1 className="text-xl font-bold">Voir les Contraintes - Fareno University</h1>
+                        <div className="flex items-center gap-4">
+                            <span>Temps passé : {formatTime(timeSpent)}</span>
+                            <a href="dashboard.html" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Retour au Tableau de Bord</a>
+                        </div>
+                    </header>
+                    <main className="p-6 max-w-7xl mx-auto">
+                        <h2 className="text-2xl font-bold mb-4">Liste des Contraintes ⚖️</h2>
+                        <div className="bg-white p-6 rounded-lg shadow-md">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="bg-blue-500 text-white">
+                                        <th className="p-3 text-left">Ressource</th>
+                                        <th className="p-3 text-left">Jour</th>
+                                        <th className="p-3 text-left">Heure</th>
+                                        <th className="p-3 text-left">Type</th>
+                                        <th className="p-3 text-left">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {constraints.map(constraint => (
+                                        <tr key={constraint.id} className="border-b">
+                                            <td className="p-3">{constraint.resource}</td>
+                                            <td className="p-3">{constraint.day}</td>
+                                            <td className="p-3">{constraint.time}</td>
+                                            <td className="p-3">{constraint.type}</td>
+                                            <td className="p-3">
+                                                <button onClick={() => openEditModal(constraint)} className="bg-yellow-500 text-white px-2 py-1 rounded mr-2 hover:bg-yellow-600">Modifier</button>
+                                                <button onClick={() => deleteConstraint(constraint.id)} className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Supprimer</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {constraints.length === 0 && (
+                                        <tr>
+                                            <td colSpan="5" className="p-3 text-center text-gray-500">Aucune contrainte trouvée</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        {showModal && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                                    <h3 className="text-lg font-bold mb-4">Modifier la Contrainte</h3>
+                                    <form onSubmit={updateConstraint}>
+                                        <select
+                                            name="resourceType"
+                                            className="border p-2 rounded w-full mb-2"
+                                            value={currentConstraint.resourceType}
+                                            onChange={handleInputChange}
+                                            required
+                                        >
+                                            <option value="teacher">Enseignant</option>
+                                            <option value="group">Groupe</option>
+                                            <option value="room">Salle</option>
+                                        </select>
+                                        <select
+                                            name="resource"
+                                            className="border p-2 rounded w-full mb-2"
+                                            value={currentConstraint.resource}
+                                            onChange={handleInputChange}
+                                            required
+                                        >
+                                            <option value="">Sélectionner une ressource</option>
+                                            {(currentConstraint.resourceType === 'teacher' ? teachers : currentConstraint.resourceType === 'group' ? groups : rooms).map(r => (
+                                                <option key={r.id} value={r.name}>{r.name}</option>
+                                            ))}
+                                        </select>
+                                        <select
+                                            name="day"
+                                            className="border p-2 rounded w-full mb-2"
+                                            value={currentConstraint.day}
+                                            onChange={handleInputChange}
+                                            required
+                                        >
+                                            <option value="">Jour</option>
+                                            <option>Lundi</option>
+                                            <option>Mardi</option>
+                                            <option>Mercredi</option>
+                                            <option>Jeudi</option>
+                                            <option>Vendredi</option>
+                                        </select>
+                                        <input
+                                            type="time"
+                                            name="time"
+                                            className="border p-2 rounded w-full mb-2"
+                                            value={currentConstraint.time}
+                                            onChange={handleInputChange}
+                                            required
+                                        />
+                                        <select
+                                            name="type"
+                                            className="border p-2 rounded w-full mb-2"
+                                            value={currentConstraint.type}
+                                            onChange={handleInputChange}
+                                            required
+                                        >
+                                            <option value="">Type</option>
+                                            <option>Indisponible</option>
+                                            <option>Préférence</option>
+                                        </select>
+                                        <div className="flex justify-end gap-2">
+                                            <button type="button" className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600" onClick={closeModal}>Annuler</button>
+                                            <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Enregistrer</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<ConstraintsPage />, document.getElementById('root'));
+    </script>
+</body>
+</html>

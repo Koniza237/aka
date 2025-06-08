@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualisation - Fareno University</title>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.15/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #background-image {
+            background: linear-gradient(135deg, #1e3a8a, #6b7280, #1e3a8a);
+            background-size: 200% 200%;
+            animation: gradientShift 15s ease-in-out infinite;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div id="background-image" class="fixed inset-0 z-0"></div>
+    <div id="root" class="relative z-10"></div>
+
+    <script type="text/babel">
+        function VisualisationPage() {
+            const [groupFilter, setGroupFilter] = React.useState('');
+            const [teacherFilter, setTeacherFilter] = React.useState('');
+            const [dateFilter, setDateFilter] = React.useState('');
+            const [timetables, setTimetables] = React.useState([]);
+            const [teachers, setTeachers] = React.useState([]);
+            const [groups, setGroups] = React.useState([]);
+            const [timeSpent, setTimeSpent] = React.useState(0);
+
+            React.useEffect(() => {
+                const startTime = Date.now();
+                const timer = setInterval(() => {
+                    const seconds = Math.floor((Date.now() - startTime) / 1000);
+                    setTimeSpent(seconds);
+                }, 1000);
+
+                fetchData();
+
+                return () => clearInterval(timer);
+            }, []);
+
+            const formatTime = (seconds) => {
+                const hrs = Math.floor(seconds / 3600);
+                const mins = Math.floor((seconds % 3600) / 60);
+                const secs = seconds % 60;
+                return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            };
+
+            const fetchData = async () => {
+                const [visualisationData, teachersData, groupsData] = await Promise.all([
+                    fetch('/api/visualisation').then(res => res.json()),
+                    fetch('/api/resources/teachers').then(res => res.json()),
+                    fetch('/api/resources/groups').then(res => res.json())
+                ]);
+                setTimetables(visualisationData.flatMap(v => v.timetable.map(t => ({ ...t, date: v.date }))));
+                setTeachers(teachersData);
+                setGroups(groupsData);
+            };
+
+            const filterTimetables = () => {
+                let filtered = timetables;
+                if (groupFilter) {
+                    filtered = filtered.filter(t => 
+                        (t.lundi && t.lundi.includes(groupFilter)) || 
+                        (t.mardi && t.mardi.includes(groupFilter)) || 
+                        (t.mercredi && t.mercredi.includes(groupFilter)) || 
+                        (t.jeudi && t.jeudi.includes(groupFilter)) || 
+                        (t.vendredi && t.vendredi.includes(groupFilter))
+                    );
+                }
+                if (teacherFilter) {
+                    filtered = filtered.filter(t => 
+                        (t.lundi && t.lundi.includes(teacherFilter)) || 
+                        (t.mardi && t.mardi.includes(teacherFilter)) || 
+                        (t.mercredi && t.mercredi.includes(teacherFilter)) || 
+                        (t.jeudi && t.jeudi.includes(teacherFilter)) || 
+                        (t.vendredi && t.vendredi.includes(teacherFilter))
+                    );
+                }
+                if (dateFilter) {
+                    filtered = filtered.filter(t => t.date === dateFilter);
+                }
+                return filtered;
+            };
+
+            const refreshTimetable = async () => {
+                if (!dateFilter) {
+                    alert('Veuillez sélectionner une date');
+                    return;
+                }
+                const response = await fetch('/api/generate-timetable', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date: dateFilter })
+                });
+                const newTimetable = await response.json();
+                fetchData();
+            };
+
+            const clearVisualisation = async () => {
+                await fetch('/api/visualisation', { method: 'DELETE' });
+                fetchData();
+            };
+
+            const filteredTimetables = filterTimetables();
+
+            return (
+                <div className="min-h-screen">
+                    <header className="bg-white shadow-md p-4 flex justify-between items-center">
+                        <div className="flex items-center">
+                            <h1 className="text-xl font-bold">Visualisation - Fareno University</h1>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <span>Temps passé : {formatTime(timeSpent)}</span>
+                            <a href="dashboard.html" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Retour au Tableau de Bord</a>
+                        </div>
+                    </header>
+                    <main className="p-6 max-w-7xl mx-auto">
+                        <h2 className="text-2xl font-bold mb-4">Visualisation 📈</h2>
+                        <div className="filters flex flex-wrap gap-4 mb-6">
+                            <select
+                                className="border p-2 rounded w-full md:w-64 bg-gray-50 text-gray-700"
+                                value={groupFilter}
+                                onChange={(e) => setGroupFilter(e.target.value)}
+                            >
+                                <option value="">Sélectionner un groupe</option>
+                                {groups.map(group => (
+                                    <option key={group.id} value={group.name}>{group.name}</option>
+                                ))}
+                            </select>
+                            <select
+                                className="border p-2 rounded w-full md:w-64 bg-gray-50 text-gray-700"
+                                value={teacherFilter}
+                                onChange={(e) => setTeacherFilter(e.target.value)}
+                            >
+                                <option value="">Sélectionner un enseignant</option>
+                                {teachers.map(teacher => (
+                                    <option key={teacher.id} value={teacher.name}>{teacher.name}</option>
+                                ))}
+                            </select>
+                            <input
+                                type="date"
+                                className="border p-2 rounded w-full md:w-64 bg-gray-50 text-gray-700"
+                                value={dateFilter}
+                                onChange={(e) => setDateFilter(e.target.value)}
+                            />
+                            <button
+                                className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 text-lg font-semibold shadow-md"
+                                onClick={refreshTimetable}
+                            >
+                                Actualiser/Générer
+                            </button>
+                            <button
+                                className="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 text-lg font-semibold shadow-md"
+                                onClick={clearVisualisation}
+                            >
+                                Vider
+                            </button>
+                            <a href="exportation.html" className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 text-lg font-semibold shadow-md flex items-center">
+                                Exporter
+                            </a>
+                        </div>
+                        <div className="timetable-preview bg-white p-6 rounded-lg shadow-md">
+                            <h3 className="text-lg font-semibold mb-4">Aperçu de l'Emploi du Temps</h3>
+                            <div className="overflow-x-auto">
+                                <table className="w-full bg-white rounded-md">
+                                    <thead>
+                                        <tr className="bg-blue-600 text-white">
+                                            <th className="p-3 text-left">Date</th>
+                                            <th className="p-3 text-left">Heure</th>
+                                            <th className="p-3 text-left">Lundi</th>
+                                            <th className="p-3 text-left">Mardi</th>
+                                            <th className="p-3 text-left">Mercredi</th>
+                                            <th className="p-3 text-left">Jeudi</th>
+                                            <th className="p-3 text-left">Vendredi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="timetable-table-body">
+                                        {filteredTimetables.map((timetable, index) => (
+                                            <React.Fragment key={index}>
+                                                <tr className="border-b">
+                                                    <td className="p-3">{timetable.date}</td>
+                                                    <td className="p-3">{timetable.time}</td>
+                                                    <td className="p-3">{timetable.lundi || '-'}</td>
+                                                    <td className="p-3">{timetable.mardi || '-'}</td>
+                                                    <td className="p-3">{timetable.mercredi || '-'}</td>
+                                                    <td className="p-3">{timetable.jeudi || '-'}</td>
+                                                    <td className="p-3">{timetable.vendredi || '-'}</td>
+                                                </tr>
+                                                {timetable.time === '10:00-12:00' && (
+                                                    <tr className="border-b bg-gray-200">
+                                                        <td className="p-3">{timetable.date}</td>
+                                                        <td className="p-3">12:00-13:00</td>
+                                                        <td className="p-3">Pause</td>
+                                                        <td className="p-3">Pause</td>
+                                                        <td className="p-3">Pause</td>
+                                                        <td className="p-3">Pause</td>
+                                                        <td className="p-3">Pause</td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<VisualisationPage />, document.getElementById('root'));
+    </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "date": "2025-04-01",
+    "timetable": [
+      {
+        "time": "08:00-10:00",
+        "lundi": "Mathématiques (Guf, fareno-universite, Salle 202)",
+        "mardi": "PCT (Paco, fareno-universite, Salle 203)",
+        "mercredi": "Mathématiques (Guf, fareno-universite, Salle 202)",
+        "jeudi": "Mathématiques (Guf, fareno-universite, Salle 202)",
+        "vendredi": "PCT (Paco, fareno-universite, Salle 202)"
+      },
+      {
+        "time": "10:00-12:00",
+        "lundi": "PCT (Paco, university, Salle 203)",
+        "mardi": "PCT (Paco, university, Salle 203)",
+        "mercredi": "PCT (Paco, university, Salle 203)",
+        "jeudi": "Mathématiques (Guf, university, Salle 203)",
+        "vendredi": "Mathématiques (Guf, fareno-universite, Salle 202)"
+      },
+      {
+        "time": "14:00-16:00",
+        "lundi": "Chinois (Freddy, fareno-universite, Salle 203)",
+        "mardi": "Chinois (Freddy, university, Salle 202)",
+        "mercredi": "Mathématiques (Guf, university, Salle 202)",
+        "jeudi": "PCT (Paco, university, Salle 203)",
+        "vendredi": "Mathématiques (Guf, fareno-universite, Salle 203)"
+      }
+    ]
+  }
+]

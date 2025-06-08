@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="FARENOUNIVERSITY.jpg" type="image/x-icon">
+    <title>Tableau de Bord Administratif - Fareno University</title>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.15/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #background-image {
+            background: linear-gradient(135deg, #1e3a8a, #6b7280, #1e3a8a);
+            background-size: 200% 200%;
+            animation: gradientShift 15s ease-in-out infinite;
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        #root {
+            position: relative;
+            z-index: 10;
+        }
+        .card {
+            transition: transform 0.3s ease, opacity 0.5s ease;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        .card-animate {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        body {
+            margin: 0;
+            font-family: sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div id="background-image"></div>
+    <div id="root"></div>
+    <div class="fixed bottom-4 right-4 text-white text-sm">01:47 AM WAT, Dimanche 08 Juin 2025</div>
+
+    <script type="text/babel">
+        function Dashboard() {
+            const [activeSection, setActiveSection] = React.useState('dashboard');
+            const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+            const [activeTab, setActiveTab] = React.useState('teachers');
+            const [showModal, setShowModal] = React.useState(false);
+            const [modalType, setModalType] = React.useState('');
+            const [modalAction, setModalAction] = React.useState('');
+            const [currentResource, setCurrentResource] = React.useState({});
+            const [user, setUser] = React.useState(null);
+            const [teachers, setTeachers] = React.useState([]);
+            const [rooms, setRooms] = React.useState([]);
+            const [groups, setGroups] = React.useState([]);
+            const [students, setStudents] = React.useState([]);
+            const [users, setUsers] = React.useState([]);
+            const [constraints, setConstraints] = React.useState([]);
+            const [timetables, setTimetables] = React.useState([]);
+            const [documents, setDocuments] = React.useState([]);
+            const [newResource, setNewResource] = React.useState({});
+            const [newUser, setNewUser] = React.useState({ type: 'teacher', name: '', email: '', role: 'Enseignant', password: '' });
+            const [newConstraint, setNewConstraint] = React.useState({ resourceType: 'teacher', resource: '', day: '', time: '', type: '' });
+            const [newDocument, setNewDocument] = React.useState({ title: '', category: '', file: null });
+            const [aiInput, setAiInput] = React.useState('');
+            const [aiResponse, setAiResponse] = React.useState('');
+            const [aiError, setAiError] = React.useState('');
+            const [aiLoading, setAiLoading] = React.useState(false);
+            const [timeSpent, setTimeSpent] = React.useState(0);
+            const [isOnline, setIsOnline] = React.useState(navigator.onLine);
+
+            React.useEffect(() => {
+                const userData = localStorage.getItem('connectadmin');
+                if (userData) {
+                    try {
+                        const parsedData = JSON.parse(userData);
+                        if (parsedData.name && parsedData.role) setUser(parsedData);
+                    } catch (e) {}
+                }
+
+                const startTime = Date.now();
+                const timer = setInterval(() => {
+                    const seconds = Math.floor((Date.now() - startTime) / 1000);
+                    setTimeSpent(seconds);
+                }, 1000);
+
+                fetchResources();
+                fetchUsers();
+                fetchConstraints();
+                fetchDocuments();
+
+                const handleOnline = () => setIsOnline(true);
+                const handleOffline = () => setIsOnline(false);
+                window.addEventListener('online', handleOnline);
+                window.addEventListener('offline', handleOffline);
+
+                const cards = document.querySelectorAll('.card');
+                cards.forEach((card, index) => {
+                    setTimeout(() => {
+                        card.classList.add('card-animate');
+                    }, index * 200);
+                });
+
+                return () => {
+                    clearInterval(timer);
+                    window.removeEventListener('online', handleOnline);
+                    window.removeEventListener('offline', handleOffline);
+                };
+            }, []);
+
+            const formatTime = (seconds) => {
+                const hrs = Math.floor(seconds / 3600);
+                const mins = Math.floor((seconds % 3600) / 60);
+                const secs = seconds % 60;
+                return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            };
+
+            const fetchResources = async () => {
+                try {
+                    const [teachersData, groupsData, roomsData] = await Promise.all([
+                        fetch('/api/resources/teachers').then(res => res.json()),
+                        fetch('/api/resources/groups').then(res => res.json()),
+                        fetch('/api/resources/rooms').then(res => res.json())
+                    ]);
+                    setTeachers(teachersData);
+                    setGroups(groupsData);
+                    setRooms(roomsData);
+                } catch (err) {
+                    console.error('Erreur lors du chargement des ressources:', err);
+                }
+            };
+
+            const fetchUsers = async () => {
+                try {
+                    const [teachersData, studentsData, adminsData] = await Promise.all([
+                        fetch('/api/users/teachers').then(res => res.json()),
+                        fetch('/api/users/students').then(res => res.json()),
+                        fetch('/api/users/admins').then(res => res.json())
+                    ]);
+                    setStudents(studentsData);
+                    setUsers([...teachersData, ...studentsData, ...adminsData]);
+                } catch (err) {
+                    console.error('Erreur lors du chargement des utilisateurs:', err);
+                }
+            };
+
+            const fetchConstraints = async () => {
+                try {
+                    const data = await fetch('/api/constraints').then(res => res.json());
+                    setConstraints(data);
+                } catch (err) {
+                    console.error('Erreur lors du chargement des contraintes:', err);
+                }
+            };
+
+            const fetchDocuments = async () => {
+                try {
+                    const response = await fetch('/api/documents');
+                    if (!response.ok) throw new Error('Erreur lors du chargement des documents');
+                    const data = await response.json();
+                    setDocuments(data);
+                } catch (err) {
+                    console.error('Erreur lors du chargement des documents:', err);
+                    alert('Erreur lors du chargement des documents: ' + err.message);
+                }
+            };
+
+            const handleLogout = async () => {
+                try {
+                    await fetch('/api/logout', { method: 'POST' });
+                    localStorage.removeItem('connectadmin');
+                    window.location.href = 'choix.html';
+                } catch (err) {
+                    console.error('Erreur lors de la déconnexion:', err);
+                }
+            };
+
+            const openModal = (type, action, resource = {}) => {
+                setModalType(type);
+                setModalAction(action);
+                setShowModal(true);
+                if (type === 'users') {
+                    setNewUser(action === 'edit' ? { ...resource, password: '' } : { type: 'teacher', name: '', email: '', role: 'Enseignant', password: '' });
+                } else if (type === 'constraints') {
+                    setNewConstraint(action === 'edit' ? { ...resource } : { resourceType: 'teacher', resource: '', day: '', time: '', type: '' });
+                } else if (type === 'documents') {
+                    setNewDocument(action === 'edit' ? { ...resource, file: null } : { title: '', category: '', file: null });
+                } else {
+                    setNewResource(action === 'edit' ? { ...resource } : 
+                        type === 'teachers' ? { name: '', subjects: '', availability: '' } :
+                        type === 'rooms' ? { name: '', capacity: '', equipment: '' } :
+                        { name: '', studentCount: '', subjects: '' });
+                }
+                setCurrentResource(resource);
+            };
+
+            const closeModal = () => {
+                setShowModal(false);
+                setModalType('');
+                setModalAction('');
+                setNewResource({});
+                setNewUser({ type: 'teacher', name: '', email: '', role: 'Enseignant', password: '' });
+                setNewConstraint({ resourceType: 'teacher', resource: '', day: '', time: '', type: '' });
+                setNewDocument({ title: '', category: '', file: null });
+                setCurrentResource({});
+            };
+
+            const handleInputChange = (e, setter, state) => {
+                const { name, value } = e.target;
+                setter({ ...state, [name]: value });
+            };
+
+            const handleFileChange = (e) => {
+                setNewDocument({ ...newDocument, file: e.target.files[0] });
+            };
+
+            const saveResource = async (e) => {
+                e.preventDefault();
+                try {
+                    let stateSetter, endpoint, data;
+                    if (modalType === 'teachers') {
+                        stateSetter = setTeachers;
+                        endpoint = '/api/resources/teachers';
+                        data = { name: newResource.name, subjects: newResource.subjects, availability: newResource.availability };
+                    } else if (modalType === 'rooms') {
+                        stateSetter = setRooms;
+                        endpoint = '/api/resources/rooms';
+                        data = { name: newResource.name, capacity: parseInt(newResource.capacity), equipment: newResource.equipment };
+                    } else if (modalType === 'groups') {
+                        stateSetter = setGroups;
+                        endpoint = '/api/resources/groups';
+                        data = { name: newResource.name, studentCount: parseInt(newResource.studentCount), subjects: newResource.subjects };
+                    } else if (modalType === 'users') {
+                        stateSetter = setUsers;
+                        endpoint = `/api/users/${newUser.type}s`;
+                        data = newUser.type === 'teacher' ? { email: newUser.email, password: newUser.password } :
+                               newUser.type === 'student' ? { name: newUser.name, password: newUser.password } :
+                               { email: newUser.email, password: newUser.password };
+                    } else if (modalType === 'constraints') {
+                        stateSetter = setConstraints;
+                        endpoint = '/api/constraints';
+                        data = newConstraint;
+                    } else if (modalType === 'documents') {
+                        stateSetter = setDocuments;
+                        endpoint = '/api/documents';
+                        const formData = new FormData();
+                        formData.append('title', newDocument.title);
+                        formData.append('category', newDocument.category);
+                        formData.append('file', newDocument.file);
+                        formData.append('uploadedBy', user ? user.name : 'Admin');
+                        const response = await fetch(endpoint, {
+                            method: 'POST',
+                            body: formData
+                        });
+                        if (!response.ok) throw new Error('Erreur lors de l\'enregistrement du document');
+                        const newData = await response.json();
+                        stateSetter(prev => [...prev, newData]);
+                        closeModal();
+                        fetchDocuments();
+                        return;
+                    }
+
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    if (!response.ok) throw new Error('Erreur lors de l\'enregistrement');
+                    const newData = await response.json();
+
+                    if (modalType === 'users') {
+                        fetchUsers();
+                    } else if (modalType === 'constraints') {
+                        setConstraints([...constraints, newData]);
+                    } else {
+                        stateSetter(prev => [...prev, newData]);
+                    }
+                    closeModal();
+                } catch (err) {
+                    console.error('Erreur lors de l\'enregistrement:', err);
+                    alert('Erreur lors de l\'enregistrement: ' + err.message);
+                }
+            };
+
+            const handleDownload = async (documentId, documentName) => {
+                try {
+                    const response = await fetch(`/api/documents/${documentId}/download`);
+                    if (!response.ok) throw new Error('Erreur lors du téléchargement');
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = documentName;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                } catch (err) {
+                    console.error('Erreur lors du téléchargement:', err);
+                    alert('Erreur lors du téléchargement: ' + err.message);
+                }
+            };
+
+            const handleDelete = async (documentId) => {
+                if (!window.confirm('Voulez-vous vraiment supprimer ce document ?')) return;
+                try {
+                    const response = await fetch(`/api/documents/${documentId}`, {
+                        method: 'DELETE'
+                    });
+                    if (!response.ok) throw new Error('Erreur lors de la suppression');
+                    setDocuments(documents.filter(doc => doc.id !== documentId));
+                } catch (err) {
+                    console.error('Erreur lors de la suppression:', err);
+                    alert('Erreur lors de la suppression: ' + err.message);
+                }
+            };
+
+            const handleAiSubmit = async (e) => {
+                e.preventDefault();
+                if (!aiInput.trim()) return;
+                if (!isOnline) {
+                    setAiError('L\'IA ne peut pas répondre car vous n\'êtes pas connecté à Internet.');
+                    return;
+                }
+                setAiLoading(true);
+                setAiError('');
+                setAiResponse('');
+                try {
+                    const response = await fetch('/api/ai', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt: aiInput })
+                    });
+                    if (!response.ok) throw new Error('Erreur API');
+                    const data = await response.json();
+                    setAiResponse(data.response);
+                    setDocuments([...documents, {
+                        id: documents.length + 1,
+                        title: 'Réponse IA',
+                        category: 'Notes Internes',
+                        fileName: `reponse_ia_${Date.now()}.txt`,
+                        uploadedBy: user ? user.name : 'Admin',
+                        uploadDate: new Date().toISOString().slice(0, 16).replace('T', ' ')
+                    }]);
+                } catch (error) {
+                    setAiError('Erreur: ' + error.message);
+                } finally {
+                    setAiLoading(false);
+                }
+            };
+
+            const sections = {
+                dashboard: (
+                    <div className="p-8">
+                        <h2 className="text-2xl font-bold mb-4">Tableau de bord 📊</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="card bg-white p-4 rounded-lg shadow-md">
+                                <h3 className="text-lg font-semibold">Enseignants 👩‍🏫</h3>
+                                <p className="text-3xl font-bold text-blue-600">{teachers.length}</p>
+                            </div>
+                            <div className="card bg-white p-4 rounded-lg shadow-md">
+                                <h3 className="text-lg font-semibold">Salles 🏫</h3>
+                                <p className="text-3xl font-bold text-green-600">{rooms.length}</p>
+                            </div>
+                            <div className="card bg-white p-4 rounded-lg shadow-md">
+                                <h3 className="text-lg font-semibold">Groupes 👥</h3>
+                                <p className="text-3xl font-bold text-purple-600">{groups.length}</p>
+                            </div>
+                            <div className="card bg-white p-4 rounded-lg shadow-md">
+                                <h3 className="text-lg font-semibold">Utilisateurs 👥</h3>
+                                <p className="text-3xl font-bold text-orange-600">{users.length}</p>
+                            </div>
+                            <div className="card bg-white p-4 rounded-lg shadow-md">
+                                <h3 className="text-lg font-semibold">Contraintes ⚙️</h3>
+                                <p className="text-3xl font-bold text-teal-600">{constraints.length}</p>
+                            </div>
+                            <div className="card bg-white p-4 rounded-lg shadow-md">
+                                <h3 className="text-lg font-semibold">Étudiants 👨‍🎓</h3>
+                                <p className="text-3xl font-bold text-red-600">{students.length}</p>
+                            </div>
+                        </div>
+                    </div>
+                ),
+                resources: (
+                    <div className="p-6">
+                        <h2 className="text-2xl font-bold mb-4">Gestion des Ressources 🛠️</h2>
+                        <div className="tabs flex border-b-2 border-blue-500 mb-4">
+                            <button className={`px-4 py-2 text-lg ${activeTab === 'teachers' ? 'bg-blue-500 text-white' : 'text-gray-600 hover:bg-blue-100'}`} onClick={() => setActiveTab('teachers')}>
+                                Enseignants
+                            </button>
+                            <button className={`px-4 py-2 text-lg ${activeTab === 'groups' ? 'bg-blue-500 text-white' : 'text-gray-600 hover:bg-blue-100'}`} onClick={() => setActiveTab('groups')}>
+                                Groupes
+                            </button>
+                            <button className={`px-4 py-2 text-lg ${activeTab === 'rooms' ? 'bg-blue-500 text-white' : 'text-gray-600 hover:bg-blue-100'}`} onClick={() => setActiveTab('rooms')}>
+                                Salles
+                            </button>
+                        </div>
+                        <div className="flex justify-center gap-4">
+                            <button className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 text-lg font-semibold shadow-md" onClick={() => openModal(activeTab, 'add')}>
+                                Ajouter {activeTab === 'teachers' ? 'Enseignant' : activeTab === 'groups' ? 'Groupe' : 'Salle'}
+                            </button>
+                            <button className="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 text-lg font-semibold shadow-md" onClick={() => window.location.href = `voir_${activeTab}.html`}>
+                                Voir {activeTab === 'teachers' ? 'Enseignants' : activeTab === 'groups' ? 'Groupes' : 'Salles'}
+                            </button>
+                        </div>
+                        {showModal && modalType !== 'users' && modalType !== 'constraints' && modalType !== 'documents' && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                                    <h3 className="text-lg font-bold mb-4">{modalAction === 'edit' ? 'Modifier' : 'Ajouter'} {modalType}</h3>
+                                    <form onSubmit={saveResource}>
+                                        <input type="text" name="name" placeholder="Nom" className="border p-2 rounded w-full mb-2" value={newResource.name || ''} onChange={(e) => handleInputChange(e, setNewResource, newResource)} required />
+                                        {modalType === 'teachers' && (
+                                            <>
+                                                <input type="text" name="subjects" placeholder="Matières" className="border p-2 rounded w-full mb-2" value={newResource.subjects || ''} onChange={(e) => handleInputChange(e, setNewResource, newResource)} required />
+                                                <input type="text" name="availability" placeholder="Disponibilités" className="border p-2 rounded w-full mb-2" value={newResource.availability || ''} onChange={(e) => handleInputChange(e, setNewResource, newResource)} required />
+                                            </>
+                                        )}
+                                        {modalType === 'rooms' && (
+                                            <>
+                                                <input type="number" name="capacity" placeholder="Capacité" className="border p-2 rounded w-full mb-2" value={newResource.capacity || ''} onChange={(e) => handleInputChange(e, setNewResource, newResource)} required />
+                                                <input type="text" name="equipment" placeholder="Équipements" className="border p-2 rounded w-full mb-2" value={newResource.equipment || ''} onChange={(e) => handleInputChange(e, setNewResource, newResource)} required />
+                                            </>
+                                        )}
+                                        {modalType === 'groups' && (
+                                            <>
+                                                <input type="number" name="studentCount" placeholder="Nombre d'étudiants" className="border p-2 rounded w-full mb-2" value={newResource.studentCount || ''} onChange={(e) => handleInputChange(e, setNewResource, newResource)} required />
+                                                <input type="text" name="subjects" placeholder="Matières" className="border p-2 rounded w-full mb-2" value={newResource.subjects || ''} onChange={(e) => handleInputChange(e, setNewResource, newResource)} required />
+                                            </>
+                                        )}
+                                        <div className="flex justify-end gap-2">
+                                            <button type="button" className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600" onClick={closeModal}>Annuler</button>
+                                            <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">{modalAction === 'edit' ? 'Modifier' : 'Ajouter'}</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ),
+                users: (
+                    <div className="p-6">
+                        <h2 className="text-2xl font-bold mb-4">Gestion des Utilisateurs 👥</h2>
+                        <div className="flex justify-center gap-4">
+                            <button className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 text-lg font-semibold shadow-md" onClick={() => openModal('users', 'add')}>
+                                Ajouter Membre
+                            </button>
+                            <button className="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 text-lg font-semibold shadow-md" onClick={() => window.location.href = 'voir_utilisateurs.html'}>
+                                Voir Utilisateurs
+                            </button>
+                        </div>
+                        {showModal && modalType === 'users' && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                                    <h3 className="text-lg font-bold mb-4">{modalAction === 'edit' ? 'Modifier' : 'Ajouter'} Membre</h3>
+                                    <form onSubmit={saveResource}>
+                                        <select name="type" className="border p-2 rounded w-full mb-2" value={newUser.type} onChange={(e) => handleInputChange(e, setNewUser, newUser)} required>
+                                            <option value="teacher">Enseignant</option>
+                                            <option value="student">Étudiant</option>
+                                            <option value="admin">Administrateur</option>
+                                        </select>
+                                        {newUser.type === 'student' ? (
+                                            <input type="text" name="name" placeholder="Nom" className="border p-2 rounded w-full mb-2" value={newUser.name} onChange={(e) => handleInputChange(e, setNewUser, newUser)} required />
+                                        ) : (
+                                            <input type="email" name="email" placeholder="E-mail" className="border p-2 rounded w-full mb-2" value={newUser.email} onChange={(e) => handleInputChange(e, setNewUser, newUser)} required />
+                                        )}
+                                        <input type="password" name="password" placeholder="Mot de passe" className="border p-2 rounded w-full mb-2" value={newUser.password} onChange={(e) => handleInputChange(e, setNewUser, newUser)} required />
+                                        <div className="flex justify-end gap-2">
+                                            <button type="button" className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600" onClick={closeModal}>Annuler</button>
+                                            <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">{modalAction === 'edit' ? 'Modifier' : 'Ajouter'}</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ),
+                constraints: (
+                    <div className="p-6">
+                        <h2 className="text-2xl font-bold mb-4">Saisie des Contraintes ⚖️</h2>
+                        <div className="flex justify-center gap-4">
+                            <button className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 text-lg font-semibold shadow-md" onClick={() => openModal('constraints', 'add')}>
+                                Ajouter Contrainte
+                            </button>
+                            <button className="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 text-lg font-semibold shadow-md" onClick={() => window.location.href = 'voir_contrainte.html'}>
+                                Voir Contraintes
+                            </button>
+                        </div>
+                        <div className="mt-4">
+                            <h3 className="text-lg font-semibold mb-2">Liste des Contraintes</h3>
+                            <table className="w-full bg-white rounded-lg shadow-md">
+                                <thead>
+                                    <tr className="bg-blue-500 text-white">
+                                        <th className="p-3 text-left">Ressource</th>
+                                        <th className="p-3 text-left">Jour</th>
+                                        <th className="p-3 text-left">Heure</th>
+                                        <th className="p-3 text-left">Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {constraints.map(c => (
+                                        <tr key={c.id} className="border-b">
+                                            <td className="p-3">{c.resource}</td>
+                                            <td className="p-3">{c.day}</td>
+                                            <td className="p-3">{c.time}</td>
+                                            <td className="p-3">{c.type}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        {showModal && modalType === 'constraints' && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                                    <h3 className="text-lg font-bold mb-4">{modalAction === 'edit' ? 'Modifier' : 'Ajouter'} Contrainte</h3>
+                                    <form onSubmit={saveResource}>
+                                        <select name="resourceType" className="border p-2 rounded w-full mb-2" value={newConstraint.resourceType} onChange={(e) => handleInputChange(e, setNewConstraint, newConstraint)} required>
+                                            <option value="teacher">Enseignant</option>
+                                            <option value="group">Groupe</option>
+                                            <option value="room">Salle</option>
+                                        </select>
+                                        <select name="resource" className="border p-2 rounded w-full mb-2" value={newConstraint.resource} onChange={(e) => handleInputChange(e, setNewConstraint, newConstraint)} required>
+                                            <option value="">Sélectionner une ressource</option>
+                                            {(newConstraint.resourceType === 'teacher' ? teachers : newConstraint.resourceType === 'group' ? groups : rooms).map(r => (
+                                                <option key={r.id} value={r.name}>{r.name}</option>
+                                            ))}
+                                        </select>
+                                        <select name="day" className="border p-2 rounded w-full mb-2" value={newConstraint.day} onChange={(e) => handleInputChange(e, setNewConstraint, newConstraint)} required>
+                                            <option value="">Jour</option>
+                                            <option value="Lundi">Lundi</option>
+                                            <option value="Mardi">Mardi</option>
+                                            <option value="Mercredi">Mercredi</option>
+                                            <option value="Jeudi">Jeudi</option>
+                                            <option value="Vendredi">Vendredi</option>
+                                        </select>
+                                        <input type="time" name="time" className="border p-2 rounded w-full mb-2" value={newConstraint.time} onChange={(e) => handleInputChange(e, setNewConstraint, newConstraint)} required />
+                                        <select name="type" className="border p-2 rounded w-full mb-2" value={newConstraint.type} onChange={(e) => handleInputChange(e, setNewConstraint, newConstraint)} required>
+                                            <option value="">Type</option>
+                                            <option value="Indisponible">Indisponible</option>
+                                            <option value="Préférence">Préférence</option>
+                                        </select>
+                                        <div className="flex justify-end gap-2">
+                                            <button type="button" className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600" onClick={closeModal}>Annuler</button>
+                                            <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">{modalAction === 'edit' ? 'Modifier' : 'Ajouter'}</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ),
+                documents: (
+                    <div className="p-6">
+                        <h2 className="text-2xl font-bold mb-4">Gestion des Documents 📄</h2>
+                        <div className="flex justify-center gap-4 mb-4">
+                            <button className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 text-lg font-semibold shadow-md" onClick={() => openModal('documents', 'add')}>
+                                Ajouter Document
+                            </button>
+                        </div>
+                        <div className="mt-4">
+                            <h3 className="text-lg font-semibold mb-2">Liste des Documents</h3>
+                            <table className="w-full bg-white rounded-lg shadow-md">
+                                <thead>
+                                    <tr className="bg-blue-500 text-white">
+                                        <th className="p-3 text-left">Titre</th>
+                                        <th className="p-3 text-left">Catégorie</th>
+                                        <th className="p-3 text-left">Nom du Fichier</th>
+                                        <th className="p-3 text-left">Ajouté par</th>
+                                        <th className="p-3 text-left">Date d'Ajout</th>
+                                        <th className="p-3 text-left">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {documents.length > 0 ? (
+                                        documents.map(doc => (
+                                            <tr key={doc.id} className="border-b">
+                                                <td className="p-3">{doc.title}</td>
+                                                <td className="p-3">{doc.category}</td>
+                                                <td className="p-3">{doc.fileName}</td>
+                                                <td className="p-3">{doc.uploadedBy}</td>
+                                                <td className="p-3">{doc.uploadDate}</td>
+                                                <td className="p-3 flex gap-2">
+                                                    <button
+                                                        className="bg-green-500 text-white px-4 py-1 rounded hover:bg-green-600"
+                                                        onClick={() => handleDownload(doc.id, doc.fileName)}
+                                                    >
+                                                        Télécharger
+                                                    </button>
+                                                    <button
+                                                        className="bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600"
+                                                        onClick={() => handleDelete(doc.id)}
+                                                    >
+                                                        Supprimer
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="6" className="p-3 text-center text-gray-500">
+                                                Aucun document disponible
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        {showModal && modalType === 'documents' && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                                    <h3 className="text-lg font-semibold mb-3">Ajouter Document</h3>
+                                    <form onSubmit={saveResource}>
+                                        <input
+                                            type="text"
+                                            name="title"
+                                            placeholder="Titre du document"
+                                            className="border p-2 rounded w-full mb-2"
+                                            value={newDocument.title}
+                                            onChange={(e) => handleInputChange(e, setNewDocument, newDocument)}
+                                            required
+                                        />
+                                        <select
+                                            name="category"
+                                            className="border p-2 rounded w-full mb-2"
+                                            value={newDocument.category}
+                                            onChange={(e) => handleInputChange(e, setNewDocument, newDocument)}
+                                            required
+                                        >
+                                            <option value="">Sélectionner une catégorie</option>
+                                            <option value="Règlements">Règlements</option>
+                                            <option value="Plannings">Plannings</option>
+                                            <option value="Notes Internes">Notes Internes</option>
+                                            <option value="Autres">Autres</option>
+                                        </select>
+                                        <input
+                                            type="file"
+                                            name="file"
+                                            className="border p-2 rounded w-full mb-2"
+                                            onChange={handleFileChange}
+                                            required
+                                        />
+                                        <div className="flex justify-end gap-2">
+                                            <button
+                                                type="button"
+                                                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                                                onClick={closeModal}
+                                            >
+                                                Annuler
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                                            >
+                                                Ajouter
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ),
+                ai: (
+                    <div className="p-6">
+                        <h2 className="text-2xl font-bold mb-4">Assistant IA 🤖</h2>
+                        <form onSubmit={handleAiSubmit}>
+                            <textarea name="text" placeholder="Posez une question..." className="border p-2 rounded w-full h-32 resize-none bg-gray-100 text-gray-800" value={aiInput} onChange={(e) => setAiInput(e.target.value)} />
+                            <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mt-4" disabled={aiLoading}>{aiLoading ? 'Chargement...' : 'Envoyer'}</button>
+                        </form>
+                        {aiResponse && <div className="mt-4 bg-green-50 p-4 rounded-lg"><h3 className="text-lg font-semibold text-green-600">Réponse:</h3><p>{aiResponse}</p></div>}
+                        {aiError && <div className="mt-4 bg-red-50 p-4 rounded-lg"><h3 className="text-lg font-semibold text-red-600">Erreur:</h3><p>{aiError}</p></div>}
+                    </div>
+                ),
+                help: (
+                    <div className="p-6">
+                        <h2 className="text-2xl font-bold mb-4">Aide ❓</h2>
+                        <p className="mb-4">Bienvenue dans la section d'aide. Voici des informations utiles pour utiliser le tableau de bord administratif de Fareno University.</p>
+                        <p className="mb-4">Pour plus de détails, consultez la documentation ou contactez le support technique.</p>
+                        <a href="aide.html" className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 text-lg">En savoir plus</a>
+                    </div>
+                )
+            };
+
+            return (
+                <div className="flex min-h-screen">
+                    <div className={`sidebar bg-gray-800 text-white w-64 space-y-6 py-7 px-2 fixed inset-y-0 left-0 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 transition duration-200 ease-in-out z-20`}>
+                        <h1 className="text-2xl font-bold text-center">Fareno University</h1>
+                        <nav>
+                            {['dashboard', 'resources', 'users', 'constraints', 'visualization', 'export', 'documents', 'messaging', 'ai', 'help'].map(section => (
+                                <button
+                                    key={section}
+                                    className={`w-full text-left py-2.5 px-4 rounded transition duration-200 hover:bg-blue-700 ${activeSection === section ? 'bg-blue-700' : ''}`}
+                                    onClick={() => {
+                                        if (section === 'export') {
+                                            window.location.href = 'exportation.html';
+                                        } else if (section === 'visualization') {
+                                            window.location.href = 'visualisation.html';
+                                        } else if (section === 'messaging') {
+                                            window.location.href = 'messagerie.html';
+                                        } else {
+                                            setActiveSection(section);
+                                            if (window.innerWidth < 768) setIsSidebarOpen(false); // Masquer la sidebar sur mobile après clic
+                                        }
+                                    }}
+                                >
+                                    {section === 'dashboard' ? 'Tableau de bord 📊' :
+                                     section === 'resources' ? 'Ressources 🛠️' :
+                                     section === 'users' ? 'Utilisateurs 👥' :
+                                     section === 'constraints' ? 'Contraintes ⚖️' :
+                                     section === 'visualization' ? 'Visualisation 📈' :
+                                     section === 'export' ? 'Exportation 📤' :
+                                     section === 'documents' ? 'Documents 📄' :
+                                     section === 'messaging' ? 'Messagerie 💬' :
+                                     section === 'ai' ? 'Assistant IA 🤖' :
+                                     'Aide ❓'}
+                                </button>
+                            ))}
+                            <button className="w-full text-left py-2.5 px-4 rounded transition bg-red-600 hover:bg-red-500" onClick={handleLogout}>Déconnexion 🚪</button>
+                        </nav>
+                    </div>
+                    <div className="flex-1 flex flex-col">
+                        <header className="bg-white shadow-md p-4 flex justify-between items-center">
+                            <div className="flex items-center">
+                                <button className="md:hidden text-gray-800 focus:outline-none" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                                    </svg>
+                                </button>
+                                <h1 className="text-xl font-bold ml-4">Tableau de Bord Administratif</h1>
+                            </div>
+                            <div>Temps passé : {formatTime(timeSpent)}</div>
+                        </header>
+                        <main className="flex-1 p-4">{sections[activeSection]}</main>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<Dashboard />, document.getElementById('root'));
+    </script>
+</body>
+</html>

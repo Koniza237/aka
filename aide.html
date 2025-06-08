@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aide et Support - Fareno University</title>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.15/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #background-image {
+            background: linear-gradient(135deg, #1e3a8a, #6b7280, #1e3a8a);
+            background-size: 200% 200%;
+            animation: gradientShift 15s ease-in-out infinite;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div id="background-image" className="fixed inset-0 z-0"></div>
+    <div id="root" className="relative z-10"></div>
+
+    <script type="text/babel">
+        function HelpPage() {
+            return (
+                <div className="min-h-screen">
+                    <header className="bg-white shadow-md p-4 flex justify-between items-center">
+                        <h1 className="text-xl font-bold">Aide et Support - Fareno University</h1>
+                        <a href="dashboard.html" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Retour au Tableau de Bord</a>
+                    </header>
+                    <main className="p-6 max-w-4xl mx-auto">
+                        <h2 className="text-2xl font-bold mb-4">Aide et Support ❓</h2>
+                        <p className="mb-4">Bienvenue dans la section d'aide du tableau de bord administratif de Fareno University. Vous trouverez ici des réponses aux questions fréquentes, des ressources utiles, et des instructions pour importer des données.</p>
+
+                        <section className="mb-8">
+                            <h3 className="text-xl font-semibold mb-2">Foire aux Questions (FAQ)</h3>
+                            <div className="bg-white p-4 rounded-lg shadow-md">
+                                <div className="mb-4">
+                                    <h4 className="font-semibold">Comment ajouter un enseignant ?</h4>
+                                    <p>Dans la section "Ressources", sélectionnez l'onglet "Enseignants" et cliquez sur "Ajouter". Remplissez le formulaire avec le nom, les matières enseignées, et les disponibilités, puis validez.</p>
+                                </div>
+                                <div className="mb-4">
+                                    <h4 className="font-semibold">Comment modifier une contrainte existante ?</h4>
+                                    <p>Allez dans "Saisie des Contraintes", cliquez sur "Voir Contraintes", trouvez la contrainte dans la liste, et cliquez sur "Modifier". Mettez à jour les champs nécessaires et sauvegardez.</p>
+                                </div>
+                                <div className="mb-4">
+                                    <h4 className="font-semibold">Pourquoi l'exportation CSV ne fonctionne-t-elle pas ?</h4>
+                                    <p>Assurez-vous que des données sont disponibles dans la section "Exportation". Si le problème persiste, vérifiez votre navigateur ou contactez le support technique.</p>
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold">Comment utiliser l'Assistant IA ?</h4>
+                                    <p>Dans la section "Assistant IA", entrez votre question dans la zone de texte et cliquez sur "Envoyer". L'IA répondra en fonction des données disponibles et des instructions fournies.</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className="mb-8">
+                            <h3 className="text-xl font-semibold mb-2">Ressources Utiles</h3>
+                            <div className="bg-white p-4 rounded-lg shadow-md">
+                                <ul className="list-disc pl-5">
+                                    <li><a href="#" className="text-blue-600 hover:underline">Documentation officielle du tableau de bord</a> : Guide complet pour toutes les fonctionnalités.</li>
+                                    <li><a href="#" className="text-blue-600 hover:underline">Guide de démarrage rapide</a> : Instructions pour configurer votre compte et commencer.</li>
+                                    <li><a href="#" className="text-blue-600 hover:underline">Support technique</a> : Contactez notre équipe pour toute assistance.</li>
+                                    <li><a href="#" className="text-blue-600 hover:underline">Forum communautaire</a> : Échangez avec d'autres administrateurs.</li>
+                                </ul>
+                            </div>
+                        </section>
+
+                        <section className="mb-8">
+                            <h3 className="text-xl font-semibold mb-2">Importation de Fichiers</h3>
+                            <div className="bg-white p-4 rounded-lg shadow-md">
+                                <p className="mb-2">Vous pouvez importer des données pour les enseignants, salles, groupes, et contraintes via des fichiers CSV ou Excel. Suivez ces étapes :</p>
+                                <ol className="list-decimal pl-5 mb-4">
+                                    <li>Téléchargez le modèle de fichier correspondant :</li>
+                                    <ul className="list-disc pl-5">
+                                        <li><a href="#" className="text-blue-600 hover:underline">Modèle CSV pour Enseignants</a></li>
+                                        <li><a href="#" className="text-blue-600 hover:underline">Modèle CSV pour Salles</a></li>
+                                        <li><a href="#" className="text-blue-600 hover:underline">Modèle CSV pour Groupes</a></li>
+                                        <li><a href="#" className="text-blue-600 hover:underline">Modèle CSV pour Contraintes</a></li>
+                                    </ul>
+                                    <li>Remplissez le fichier en respectant le format indiqué.</li>
+                                    <li>Dans la section correspondante (ex. "Ressources" ou "Contraintes"), utilisez l'option d'importation (disponible dans les pages "Voir").</li>
+                                    <li>Vérifiez les données importées dans la liste affichée.</li>
+                                </ol>
+                                <p className="font-semibold">Notes importantes :</p>
+                                <ul className="list-disc pl-5">
+                                    <li>Les fichiers doivent être au format UTF-8 pour éviter les problèmes d'encodage.</li>
+                                    <li>Les champs obligatoires doivent être remplis (ex. nom, e-mail pour les utilisateurs).</li>
+                                    <li>En cas d'erreur, un message détaillera les lignes problématiques.</li>
+                                </ul>
+                            </div>
+                        </section>
+                    </main>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<HelpPage />, document.getElementById('root'));
+    </script>
+</body>
+</html>

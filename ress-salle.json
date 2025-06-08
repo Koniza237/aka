@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "name": "Salle 202",
+    "capacity": 30,
+    "equipment": "Wifi, Television"
+  },
+  {
+    "id": 2,
+    "name": "Salle 203",
+    "capacity": 40,
+    "equipment": "Wifi, Television, projecteur"
+  }
+]

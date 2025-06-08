@@ -1,0 +1,12 @@
+[
+  {
+    "id": 1,
+    "email": "admin@fareno.university",
+    "password": "Admin123!"
+  },
+  {
+    "id": 2,
+    "email": "farenogif@gmail.com",
+    "password": "fareno12"
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "name": "Paco",
+    "subjects": "PCT",
+    "availability": "Mercredi"
+  },
+  {
+    "id": 2,
+    "name": "Guf",
+    "subjects": "Mathématiques",
+    "availability": "Jeudi"
+  },
+  {
+    "id": 3,
+    "name": "Freddy",
+    "subjects": "Chinois",
+    "availability": "Lundi"
+  },
+  {
+    "id": 4,
+    "name": "Manga",
+    "subjects": "Chimie",
+    "availability": "Jeudi"
+  }
+]

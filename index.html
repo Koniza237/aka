@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="FARENOUNIVERSITY.jpg" type="image/x-icon">
+    <title>Bienvenue - Système d'Emplois du Temps</title>
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #1a1a1a;
+          
+            overflow: hidden;
+        }
+
+        .welcome-text {
+            font-size: 3rem;
+            color: #ffffff;
+            opacity: 0;
+            animation: fadeIn 2s ease-in forwards;
+        }
+
+       
+
+
+        .university-text {
+            font-size: 4rem;
+            font-weight: bold;
+            color: #4CAF50;
+            opacity: 0;
+            transform: translateY(50px);
+            animation: slideIn 2s ease-out 2s forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .welcome-text {
+                font-size: 2rem;
+            }
+            .university-text {
+                font-size: 2.5rem;
+            }  
+            
+            
+        }
+    </style>
+</head>
+<body>
+    <div class="welcome-text">Bienvenue dans la </div>
+    <p></p>
+    <p></p>
+    <p></p>
+    <div class="university-text">FARENO UNIVERSITY</div>
+
+    <script>
+        // Redirection automatique vers login.html après 5 secondes
+        setTimeout(() => {
+            window.location.href = "choix.html";
+        }, 5000);
+    </script>
+</body>
+</html>

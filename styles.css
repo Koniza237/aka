@@ -1,0 +1,59 @@
+/* Styles pour l'image de fond */
+#background-image {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 0;
+    transition: background-color 1s ease; /* Transition fluide pour le changement de couleur */
+}
+
+/* Styles pour le conteneur principal */
+#root {
+    position: relative;
+    z-index: 10;
+}
+
+/* Animations */
+@keyframes slideIn {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Styles pour la barre latérale */
+.sidebar {
+    width: 16rem; /* w-64 */
+    background-color: #1e40af; /* bg-blue-800 */
+    color: #ffffff; /* text-white */
+    transform: translateX(-100%); /* Par défaut cachée sur mobile */
+    transition: transform 0.3s ease-in-out; /* transition-transform duration-300 ease-in-out */
+    animation: slideIn 0.5s ease-out;
+}
+
+/* Styles pour le contenu principal */
+.content {
+    flex: 1; /* flex-1 */
+    animation: fadeIn 0.7s ease-in;
+}
+
+/* Effet de survol sur les cartes */
+.card:hover {
+    transform: scale(1.05); /* scale-105 */
+    transition: transform 0.3s ease;
+}

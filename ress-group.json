@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "name": "university",
+    "studentCount": 10,
+    "subjects": "PCT"
+  },
+  {
+    "id": 2,
+    "name": "fareno-universite",
+    "studentCount": 22,
+    "subjects": "Mathématiques"
+  }
+]

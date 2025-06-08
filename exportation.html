@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exportation - Fareno University</title>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.15/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #background-image {
+            background: linear-gradient(135deg, #1e3a8a, #6b7280, #1e3a8a);
+            background-size: 200% 200%;
+            animation: gradientShift 15s ease-in-out infinite;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div id="background-image" class="fixed inset-0 z-0"></div>
+    <div id="root" class="relative z-10"></div>
+
+    <script type="text/babel">
+        function ExportationPage() {
+            const [timetables, setTimetables] = React.useState([]);
+            const [timeSpent, setTimeSpent] = React.useState(0);
+
+            React.useEffect(() => {
+                const startTime = Date.now();
+                const timer = setInterval(() => {
+                    const seconds = Math.floor((Date.now() - startTime) / 1000);
+                    setTimeSpent(seconds);
+                }, 1000);
+
+                fetchData();
+
+                return () => clearInterval(timer);
+            }, []);
+
+            const formatTime = (seconds) => {
+                const hrs = Math.floor(seconds / 3600);
+                const mins = Math.floor((seconds % 3600) / 60);
+                const secs = seconds % 60;
+                return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            };
+
+            const fetchData = async () => {
+                const visualisationData = await fetch('/api/visualisation').then(res => res.json());
+                setTimetables(visualisationData.flatMap(v => v.timetable.map(t => ({ ...t, date: v.date }))));
+            };
+
+            const getDayHeaders = (referenceDate) => {
+                const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
+                if (!referenceDate) return days;
+                const baseDate = new Date(referenceDate);
+                return days.map((day, index) => {
+                    const currentDate = new Date(baseDate);
+                    currentDate.setDate(baseDate.getDate() + index);
+                    const dayNumber = currentDate.getDate();
+                    return `${day} ${dayNumber}`;
+                });
+            };
+
+            const getReferenceDate = () => {
+                return timetables.length > 0 ? timetables[0].date : null;
+            };
+
+            const exportToCSV = () => {
+                const referenceDate = getReferenceDate();
+                const dayHeaders = getDayHeaders(referenceDate);
+                const dataWithPause = [];
+                timetables.forEach(t => {
+                    dataWithPause.push({
+                        Date: t.date,
+                        Heure: t.time,
+                        [dayHeaders[0]]: t.lundi || '-',
+                        [dayHeaders[1]]: t.mardi || '-',
+                        [dayHeaders[2]]: t.mercredi || '-',
+                        [dayHeaders[3]]: t.jeudi || '-',
+                        [dayHeaders[4]]: t.vendredi || '-'
+                    });
+                    if (t.time === '10:00-12:00') {
+                        dataWithPause.push({
+                            Date: t.date,
+                            Heure: '12:00-13:00',
+                            [dayHeaders[0]]: 'Pause',
+                            [dayHeaders[1]]: 'Pause',
+                            [dayHeaders[2]]: 'Pause',
+                            [dayHeaders[3]]: 'Pause',
+                            [dayHeaders[4]]: 'Pause'
+                        });
+                    }
+                });
+                const ws = XLSX.utils.json_to_sheet(dataWithPause);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Emploi du Temps');
+                XLSX.writeFile(wb, `emploi_du_temps_${referenceDate || 'sans_date'}.csv`);
+            };
+
+            const exportToPDF = () => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                const referenceDate = getReferenceDate();
+                const dayHeaders = getDayHeaders(referenceDate);
+                doc.setFontSize(16);
+                doc.text(`Emploi du Temps - Fareno University${referenceDate ? ` (Semaine du ${referenceDate})` : ''}`, 10, 10);
+                doc.setFontSize(12);
+                let y = 20;
+                timetables.forEach(t => {
+                    doc.text(`Date: ${t.date}`, 10, y);
+                    doc.text(`Heure: ${t.time}`, 10, y + 10);
+                    doc.text(`${dayHeaders[0]}: ${t.lundi || '-'}`, 10, y + 20);
+                    doc.text(`${dayHeaders[1]}: ${t.mardi || '-'}`, 10, y + 30);
+                    doc.text(`${dayHeaders[2]}: ${t.mercredi || '-'}`, 10, y + 40);
+                    doc.text(`${dayHeaders[3]}: ${t.jeudi || '-'}`, 10, y + 50);
+                    doc.text(`${dayHeaders[4]}: ${t.vendredi || '-'}`, 10, y + 60);
+                    y += 70;
+                    if (t.time === '10:00-12:00') {
+                        doc.text(`Date: ${t.date}`, 10, y);
+                        doc.text(`Heure: 12:00-13:00`, 10, y + 10);
+                        doc.text(`${dayHeaders[0]}: Pause`, 10, y + 20);
+                        doc.text(`${dayHeaders[1]}: Pause`, 10, y + 30);
+                        doc.text(`${dayHeaders[2]}: Pause`, 10, y + 40);
+                        doc.text(`${dayHeaders[3]}: Pause`, 10, y + 50);
+                        doc.text(`${dayHeaders[4]}: Pause`, 10, y + 60);
+                        y += 70;
+                    }
+                    if (y > 270) {
+                        doc.addPage();
+                        y = 10;
+                    }
+                });
+                doc.save(`emploi_du_temps_${referenceDate || 'sans_date'}.pdf`);
+            };
+
+            const exportToICal = () => {
+                const events = timetables.flatMap(t => {
+                    const days = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
+                    return days
+                        .filter(day => t[day] && t[day] !== '-')
+                        .map(day => {
+                            const [startHour, endHour] = t.time.split('-');
+                            const eventDate = new Date(t.date);
+                            const dayIndex = days.indexOf(day);
+                            eventDate.setDate(eventDate.getDate() + dayIndex);
+                            const [subject, details] = t[day].split(' (');
+                            return {
+                                start: `${eventDate.toISOString().split('T')[0]}T${startHour.replace(':', '')}00`,
+                                end: `${eventDate.toISOString().split('T')[0]}T${endHour.replace(':', '')}00`,
+                                summary: subject,
+                                description: details.replace(')', '')
+                            };
+                        });
+                });
+
+                const icsContent = [
+                    'BEGIN:VCALENDAR',
+                    'VERSION:2.0',
+                    'PRODID:-//Fareno University//Timetable//EN',
+                    ...events.flatMap(event => [
+                        'BEGIN:VEVENT',
+                        `DTSTART:${event.start}`,
+                        `DTEND:${event.end}`,
+                        `SUMMARY:${event.summary}`,
+                        `DESCRIPTION:${event.description}`,
+                        'END:VEVENT'
+                    ]),
+                    'END:VCALENDAR'
+                ].join('\r\n');
+
+                const referenceDate = getReferenceDate();
+                const blob = new Blob([icsContent], { type: 'text/calendar' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `emploi_du_temps_${referenceDate || 'sans_date'}.ics`;
+                link.click();
+            };
+
+            const referenceDate = getReferenceDate();
+            const dayHeaders = getDayHeaders(referenceDate);
+
+            return (
+                <div className="min-h-screen">
+                    <header className="bg-white shadow-md p-4 flex justify-between items-center">
+                        <div className="flex items-center">
+                            <h1 className="text-xl font-bold">Exportation - Fareno University</h1>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <span>Temps passé : {formatTime(timeSpent)}</span>
+                            <a href="dashboard.html" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Retour au Tableau de Bord</a>
+                        </div>
+                    </header>
+                    <main className="p-6 max-w-7xl mx-auto">
+                        <h2 className="text-2xl font-bold mb-4">Exportation 📤</h2>
+                        <div className="flex flex-wrap gap-4 mb-6">
+                            <button
+                                className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 text-lg font-semibold shadow-md"
+                                onClick={exportToPDF}
+                            >
+                                Exporter en PDF
+                            </button>
+                            <button
+                                className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 text-lg font-semibold shadow-md"
+                                onClick={exportToCSV}
+                            >
+                                Exporter en CSV
+                            </button>
+                            <button
+                                className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 text-lg font-semibold shadow-md"
+                                onClick={exportToICal}
+                            >
+                                Exporter en iCal
+                            </button>
+                        </div>
+                        <div className="timetable-preview bg-white p-6 rounded-lg shadow-md">
+                            <h3 className="text-lg font-semibold mb-4">Aperçu de l'Emploi du Temps</h3>
+                            <div className="overflow-x-auto">
+                                <table className="w-full bg-white rounded-md">
+                                    <thead>
+                                        <tr className="bg-blue-600 text-white">
+                                            <th className="p-3 text-left">Date</th>
+                                            <th className="p-3 text-left">Heure</th>
+                                            {dayHeaders.map((day, index) => (
+                                                <th key={index} className="p-3 text-left">{day}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {timetables.map((timetable, index) => (
+                                            <React.Fragment key={index}>
+                                                <tr className="border-b">
+                                                    <td className="p-3">{timetable.date}</td>
+                                                    <td className="p-3">{timetable.time}</td>
+                                                    <td className="p-3">{timetable.lundi || '-'}</td>
+                                                    <td className="p-3">{timetable.mardi || '-'}</td>
+                                                    <td className="p-3">{timetable.mercredi || '-'}</td>
+                                                    <td className="p-3">{timetable.jeudi || '-'}</td>
+                                                    <td className="p-3">{timetable.vendredi || '-'}</td>
+                                                </tr>
+                                                {timetable.time === '10:00-12:00' && (
+                                                    <tr className="border-b bg-gray-200">
+                                                        <td className="p-3">{timetable.date}</td>
+                                                        <td className="p-3">12:00-13:00</td>
+                                                        <td className="p-3">Pause</td>
+                                                        <td className="p-3">Pause</td>
+                                                        <td className="p-3">Pause</td>
+                                                        <td className="p-3">Pause</td>
+                                                        <td className="p-3">Pause</td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<ExportationPage />, document.getElementById('root'));
+    </script>
+</body>
+</html>

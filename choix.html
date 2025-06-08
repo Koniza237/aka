@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choix de Connexion - Fareno University</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .fade-in {
+            animation: fadeIn 1s ease-in-out;
+        }
+        .bounce {
+            animation: bounce 1.5s infinite;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .hover-effect {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .hover-effect:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center" id="background">
+    <div class="bg-white rounded-xl p-8 shadow-2xl max-w-md w-full text-center fade-in">
+        <h1 class="text-4xl font-bold text-gray-800 mb-6">Bienvenue à Fareno University</h1>
+        <p class="text-gray-600 mb-8">Choisissez votre type de connexion :</p>
+        <div class="space-y-4">
+            <a href="admin.html" class="block w-full bg-blue-500 text-white py-3 px-6 rounded-lg font-semibold hover-effect hover:bg-blue-600">
+                Connexion Administrateur
+            </a>
+            <a href="teacher.html" class="block w-full bg-purple-500 text-white py-3 px-6 rounded-lg font-semibold hover-effect hover:bg-purple-600">
+                Connexion Enseignant
+            </a>
+            <a href="student.html" class="block w-full bg-green-500 text-white py-3 px-6 rounded-lg font-semibold hover-effect hover:bg-green-600">
+                Connexion Étudiant
+            </a>
+        </div>
+        <div class="mt-6">
+            <span class="text-sm text-gray-500" id="datetime"></span>
+        </div>
+    </div>
+    <div class="absolute top-4 left-4 text-white text-lg bounce">🎓</div>
+    <script>
+        const colors = [
+            'bg-gradient-to-br from-red-500 to-orange-600',
+            'bg-gradient-to-br from-orange-600 to-yellow-500',
+            'bg-gradient-to-br from-yellow-500 to-green-400',
+            'bg-gradient-to-br from-green-400 to-blue-500',
+            'bg-gradient-to-br from-blue-500 to-indigo-600',
+            'bg-gradient-to-br from-indigo-600 to-purple-600',
+            'bg-gradient-to-br from-purple-600 to-red-500'
+        ];
+
+        let colorIndex = 0;
+        const background = document.getElementById('background');
+
+        function changeBackgroundColor() {
+            background.className = `min-h-screen flex items-center justify-center ${colors[colorIndex]}`;
+            colorIndex = (colorIndex + 1) % colors.length;
+        }
+
+        changeBackgroundColor();
+        setInterval(changeBackgroundColor, 10000);
+
+        function updateDateTime() {
+            const now = new Date();
+            const optionsDate = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const optionsTime = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+            const date = now.toLocaleDateString('fr-FR', optionsDate);
+            const time = now.toLocaleTimeString('fr-FR', optionsTime);
+            document.getElementById('datetime').textContent = `${time}, ${date}`;
+        }
+
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion Administrateur - Fareno University</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .fade-in {
+            animation: fadeIn 1s ease-in-out;
+        }
+        .bounce {
+            animation: bounce 1.5s infinite;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .hover-effect {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .hover-effect:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        .error-message {
+            color: red;
+            margin-top: 1rem;
+            display: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center" id="background">
+    <div class="bg-white rounded-xl p-8 shadow-2xl max-w-md w-full text-center fade-in">
+        <h1 class="text-4xl font-bold text-gray-800 mb-6">Connexion Administrateur</h1>
+        <p class="text-gray-600 mb-8">Entrez vos identifiants pour accéder au panel admin.</p>
+        <p id="userStatus" class="text-gray-600 mb-4"></p>
+        <form id="loginForm" class="space-y-4">
+            <input
+                type="email"
+                id="email"
+                placeholder="Email"
+                class="border p-4 rounded w-full bg-gray-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+            />
+            <input
+                type="password"
+                id="password"
+                placeholder="Mot de passe"
+                class="border p-4 rounded w-full bg-gray-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+            />
+            <button
+                type="submit"
+                class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover-effect hover:bg-blue-700"
+            >
+                Se connecter
+            </button>
+            <p id="errorMessage" class="error-message">Identifiants incorrects. Veuillez réessayer.</p>
+        </form>
+        <a href="choix.html" class="absolute top-4 left-4 text-white font-medium hover:underline">Retour</a>
+        <div class="absolute top-4 left-4 text-white text-lg bounce">🔐</div>
+        <div class="fixed bottom-4 right-4 text-white text-sm">
+            <span id="datetime"></span>
+        </div>
+    </div>
+    <script>
+        const colors = [
+            'bg-gradient-to-br from-red-500 to-orange-600',
+            'bg-gradient-to-br from-orange-600 to-yellow-500',
+            'bg-gradient-to-br from-yellow-500 to-green-400',
+            'bg-gradient-to-br from-green-400 to-blue-500',
+            'bg-gradient-to-br from-blue-500 to-indigo-600',
+            'bg-gradient-to-br from-indigo-600 to-purple-600',
+            'bg-gradient-to-br from-purple-600 to-red-500'
+        ];
+
+        let colorIndex = 0;
+        const background = document.getElementById('background');
+
+        function changeBackgroundColor() {
+            background.className = `min-h-screen flex items-center justify-center ${colors[colorIndex]}`;
+            colorIndex = (colorIndex + 1) % colors.length;
+        }
+
+        changeBackgroundColor();
+        setInterval(changeBackgroundColor, 10000);
+
+        function updateDateTime() {
+            const now = new Date();
+            const optionsDate = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const optionsTime = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+            const date = now.toLocaleDateString('fr-FR', optionsDate);
+            const time = now.toLocaleTimeString('fr-FR', optionsTime);
+            document.getElementById('datetime').textContent = `${time}, ${date}`;
+        }
+
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+
+        // Charger le statut de l'utilisateur
+      
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('errorMessage');
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include', // Pour inclure les cookies
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    errorMessage.style.display = 'none';
+                    localStorage.setItem('connectadmin', JSON.stringify(data.admin));
+                    document.getElementById('userStatus').textContent = `Connecté en tant que : ${data.admin.email}`;
+                    window.location.href = '/dashboard.html'; // Redirection vers dashboard.html
+                } else {
+                    errorMessage.textContent = data.error || 'Erreur de connexion.';
+                    errorMessage.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Erreur lors de la connexion:', error);
+                errorMessage.textContent = 'Erreur de connexion au serveur.';
+                errorMessage.style.display = 'block';
+            }
+        });
+
+        // Déconnexion (optionnel, si vous voulez un bouton de déconnexion)
+        window.logout = async () => {
+            try {
+                await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+                localStorage.removeItem('connectadmin');
+                document.getElementById('userStatus').textContent = 'Utilisateur non connecté';
+                window.location.href = '/index.html'; // Redirection vers index.html
+            } catch (error) {
+                console.error('Erreur lors de la déconnexion:', error);
+            }
+        };
+
+        loadUserStatus();
+    </script>
+</body>
+</html>

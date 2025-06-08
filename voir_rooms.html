@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="FARENOUNIVERSITY.jpg" type="image/x-icon">
+    <title>Voir Salles - Fareno University</title>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.15/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #background-image {
+            background: linear-gradient(135deg, #1e3a8a, #6b7280, #1e3a8a);
+            background-size: 200% 200%;
+            animation: gradientShift 15s ease-in-out infinite;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div id="background-image" class="fixed inset-0 z-0"></div>
+    <div id="root" class="relative z-10"></div>
+
+    <script type="text/babel">
+        function ViewRooms() {
+            const [rooms, setRooms] = React.useState([]);
+            const [timeSpent, setTimeSpent] = React.useState(0);
+            const [showModal, setShowModal] = React.useState(false);
+            const [currentRoom, setCurrentRoom] = React.useState({ id: '', name: '', capacity: '', equipment: '' });
+
+            React.useEffect(() => {
+                const startTime = Date.now();
+                const timer = setInterval(() => {
+                    const seconds = Math.floor((Date.now() - startTime) / 1000);
+                    setTimeSpent(seconds);
+                }, 1000);
+
+                fetchRooms();
+
+                return () => clearInterval(timer);
+            }, []);
+
+            const formatTime = (seconds) => {
+                const hrs = Math.floor(seconds / 3600);
+                const mins = Math.floor((seconds % 3600) / 60);
+                const secs = seconds % 60;
+                return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            };
+
+            const fetchRooms = async () => {
+                try {
+                    const response = await fetch('/api/resources/rooms');
+                    if (!response.ok) throw new Error('Erreur lors du chargement');
+                    const data = await response.json();
+                    setRooms(data);
+                } catch (err) {
+                    console.error('Erreur:', err);
+                }
+            };
+
+            const openEditModal = (room) => {
+                setCurrentRoom(room);
+                setShowModal(true);
+            };
+
+            const closeModal = () => {
+                setShowModal(false);
+                setCurrentRoom({ id: '', name: '', capacity: '', equipment: '' });
+            };
+
+            const handleInputChange = (e) => {
+                const { name, value } = e.target;
+                setCurrentRoom(prev => ({ ...prev, [name]: name === 'capacity' ? parseInt(value) || '' : value }));
+            };
+
+            const updateRoom = async (e) => {
+                e.preventDefault();
+                try {
+                    const response = await fetch(`/api/resources/rooms/${currentRoom.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: currentRoom.name,
+                            capacity: currentRoom.capacity,
+                            equipment: currentRoom.equipment
+                        })
+                    });
+                    if (!response.ok) throw new Error('Erreur lors de la mise à jour');
+                    await fetchRooms();
+                    closeModal();
+                } catch (err) {
+                    console.error('Erreur:', err);
+                    alert('Erreur lors de la mise à jour: ' + err.message);
+                }
+            };
+
+            const deleteRoom = async (id) => {
+                if (!window.confirm('Voulez-vous vraiment supprimer cette salle ?')) return;
+                try {
+                    const response = await fetch(`/api/resources/rooms/${id}`, {
+                        method: 'DELETE'
+                    });
+                    if (!response.ok) throw new Error('Erreur lors de la suppression');
+                    await fetchRooms();
+                } catch (err) {
+                    console.error('Erreur:', err);
+                    alert('Erreur lors de la suppression: ' + err.message);
+                }
+            };
+
+            return (
+                <div className="min-h-screen">
+                    <header className="bg-white shadow-md p-4 flex justify-between items-center">
+                        <h1 className="text-xl font-bold">Voir Salles - Fareno University</h1>
+                        <div className="flex items-center gap-4">
+                            <span>Temps passé : {formatTime(timeSpent)}</span>
+                            <a href="dashboard.html" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Retour au Tableau de Bord</a>
+                        </div>
+                    </header>
+                    <main className="p-6 max-w-7xl mx-auto">
+                        <h2 className="text-2xl font-bold mb-4">Liste des Salles 🏫</h2>
+                        <div className="bg-white p-6 rounded-lg shadow-md">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="bg-blue-500 text-white">
+                                        <th className="p-3 text-left">Nom</th>
+                                        <th className="p-3 text-left">Capacité</th>
+                                        <th className="p-3 text-left">Équipements</th>
+                                        <th className="p-3 text-left">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {rooms.map(room => (
+                                        <tr key={room.id} className="border-b">
+                                            <td className="p-3">{room.name}</td>
+                                            <td className="p-3">{room.capacity}</td>
+                                            <td className="p-3">{room.equipment}</td>
+                                            <td className="p-3">
+                                                <button onClick={() => openEditModal(room)} className="bg-yellow-500 text-white px-2 py-1 rounded mr-2 hover:bg-yellow-600">Modifier</button>
+                                                <button onClick={() => deleteRoom(room.id)} className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Supprimer</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {rooms.length === 0 && (
+                                        <tr>
+                                            <td colSpan="4" className="p-3 text-center text-gray-500">Aucune salle trouvée</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        {showModal && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                                    <h3 className="text-lg font-bold mb-4">Modifier la Salle</h3>
+                                    <form onSubmit={updateRoom}>
+                                        <input
+                                            type="text"
+                                            name="name"
+                                            placeholder="Nom"
+                                            className="border p-2 rounded w-full mb-2"
+                                            value={currentRoom.name}
+                                            onChange={handleInputChange}
+                                            required
+                                        />
+                                        <input
+                                            type="number"
+                                            name="capacity"
+                                            placeholder="Capacité"
+                                            className="border p-2 rounded w-full mb-2"
+                                            value={currentRoom.capacity}
+                                            onChange={handleInputChange}
+                                            required
+                                        />
+                                        <input
+                                            type="text"
+                                            name="equipment"
+                                            placeholder="Équipements"
+                                            className="border p-2 rounded w-full mb-2"
+                                            value={currentRoom.equipment}
+                                            onChange={handleInputChange}
+                                            required
+                                        />
+                                        <div className="flex justify-end gap-2">
+                                            <button type="button" className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600" onClick={closeModal}>Annuler</button>
+                                            <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Enregistrer</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<ViewRooms />, document.getElementById('root'));
+    </script>
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="FARENOUNIVERSITY.jpg" type="image/x-icon">
+    <title>Voir Utilisateurs - Fareno University</title>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.15/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #background-image {
+            background: linear-gradient(135deg, #1e3a8a, #6b7280, #1e3a8a);
+            background-size: 200% 200%;
+            animation: gradientShift 15s ease-in-out infinite;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div id="background-image" class="fixed inset-0 z-0"></div>
+    <div id="root" class="relative z-10"></div>
+
+    <script type="text/babel">
+        function ViewUsers() {
+            const [users, setUsers] = React.useState([]);
+            const [timeSpent, setTimeSpent] = React.useState(0);
+            const [showModal, setShowModal] = React.useState(false);
+            const [currentUser, setCurrentUser] = React.useState({ id: '', type: '', name: '', email: '', password: '' });
+
+            React.useEffect(() => {
+                const startTime = Date.now();
+                const timer = setInterval(() => {
+                    const seconds = Math.floor((Date.now() - startTime) / 1000);
+                    setTimeSpent(seconds);
+                }, 1000);
+
+                fetchUsers();
+
+                return () => clearInterval(timer);
+            }, []);
+
+            const formatTime = (seconds) => {
+                const hrs = Math.floor(seconds / 3600);
+                const mins = Math.floor((seconds % 3600) / 60);
+                const secs = seconds % 60;
+                return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            };
+
+            const fetchUsers = async () => {
+                try {
+                    const [teachersData, studentsData, adminsData] = await Promise.all([
+                        fetch('/api/users/teachers').then(res => res.json()),
+                        fetch('/api/users/students').then(res => res.json()),
+                        fetch('/api/users/admins').then(res => res.json())
+                    ]);
+                    const allUsers = [
+                        ...teachersData.map(u => ({ ...u, type: 'teachers' })),
+                        ...studentsData.map(u => ({ ...u, type: 'students' })),
+                        ...adminsData.map(u => ({ ...u, type: 'admins' }))
+                    ];
+                    setUsers(allUsers);
+                } catch (err) {
+                    console.error('Erreur:', err);
+                }
+            };
+
+            const openEditModal = (user) => {
+                setCurrentUser(user);
+                setShowModal(true);
+            };
+
+            const closeModal = () => {
+                setShowModal(false);
+                setCurrentUser({ id: '', type: '', name: '', email: '', password: '' });
+            };
+
+            const handleInputChange = (e) => {
+                const { name, value } = e.target;
+                setCurrentUser(prev => ({ ...prev, [name]: value }));
+            };
+
+            const updateUser = async (e) => {
+                e.preventDefault();
+                try {
+                    const data = currentUser.type === 'students' ?
+                        { name: currentUser.name, password: currentUser.password || undefined } :
+                        { email: currentUser.email, password: currentUser.password || undefined };
+                    const response = await fetch(`/api/users/${currentUser.type}/${currentUser.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    if (!response.ok) throw new Error('Erreur lors de la mise à jour');
+                    await fetchUsers();
+                    closeModal();
+                } catch (err) {
+                    console.error('Erreur:', err);
+                    alert('Erreur lors de la mise à jour: ' + err.message);
+                }
+            };
+
+            const deleteUser = async (id, type) => {
+                if (!window.confirm('Voulez-vous vraiment supprimer cet utilisateur ?')) return;
+                try {
+                    const response = await fetch(`/api/users/${type}/${id}`, {
+                        method: 'DELETE'
+                    });
+                    if (!response.ok) throw new Error('Erreur lors de la suppression');
+                    await fetchUsers();
+                } catch (err) {
+                    console.error('Erreur:', err);
+                    alert('Erreur lors de la suppression: ' + err.message);
+                }
+            };
+
+            return (
+                <div className="min-h-screen">
+                    <header className="bg-white shadow-md p-4 flex justify-between items-center">
+                        <h1 className="text-xl font-bold">Voir Utilisateurs - Fareno University</h1>
+                        <div className="flex items-center gap-4">
+                            <span>Temps passé : {formatTime(timeSpent)}</span>
+                            <a href="dashboard.html" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Retour au Tableau de Bord</a>
+                        </div>
+                    </header>
+                    <main className="p-6 max-w-7xl mx-auto">
+                        <h2 className="text-2xl font-bold mb-4">Liste des Utilisateurs 👥</h2>
+                        <div className="bg-white p-6 rounded-lg shadow-md">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="bg-blue-600 text-white">
+                                        <th className="p-3 text-left">Type</th>
+                                        <th className="p-3 text-left">Nom/Email</th>
+                                        <th className="p-3 text-left">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {users.map(user => (
+                                        <tr key={user.id} className="border-b">
+                                            <td className="p-3">{user.type === 'teachers' ? 'Enseignant' : user.type === 'students' ? 'Étudiant' : 'Administrateur'}</td>
+                                            <td className="p-3">{user.name || user.email}</td>
+                                            <td className="p-3">
+                                                <button onClick={() => openEditModal(user)} className="bg-yellow-500 text-white px-2 py-1 rounded mr-2 hover:bg-yellow-600">Modifier</button>
+                                                <button onClick={() => deleteUser(user.id, user.type)} className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Supprimer</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {users.length === 0 && (
+                                        <tr>
+                                            <td colSpan="3" className="p-3 text-center text-gray-500">Aucun utilisateur trouvé</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        {showModal && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                                    <h3 className="text-lg font-bold mb-4">Modifier l'utilisateur</h3>
+                                    <form onSubmit={updateUser}>
+                                        <select
+                                            name="type"
+                                            className="border p-2 rounded w-full mb-2"
+                                            value={currentUser.type}
+                                            onChange={handleInputChange}
+                                            disabled
+                                        >
+                                            <option value="teachers">Enseignant</option>
+                                            <option value="students">Étudiant</option>
+                                            <option value="admins">Administrateur</option>
+                                        </select>
+                                        {currentUser.type === 'students' ? (
+                                            <input
+                                                type="text"
+                                                name="name"
+UUU                                                placeholder="Nom"
+                                                className="border p-2 rounded w-full mb-2"
+                                                value={currentUser.name}
+                                                onChange={handleInputChange}
+                                                required
+                                            />
+                                        ) : (
+                                            <input
+                                                type="email"
+                                                name="email"
+                                                placeholder="Email"
+                                                className="border p-2 rounded w-full mb-2"
+                                                value={currentUser.email}
+                                                onChange={handleInputChange}
+                                                required
+                                            />
+                                        )}
+                                        <input
+                                            type="password"
+                                            name="password"
+                                            placeholder="Nouveau mot de passe (facultatif)"
+                                            className="border p-2 rounded w-full mb-2"
+                                            value={currentUser.password || ''}
+                                            onChange={handleInputChange}
+                                        />
+                                        <div className="flex justify-end gap-2">
+                                            <button type="button" className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600" onClick={closeModal}>Annuler</button>
+                                            <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Enregistrer</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<ViewUsers />, document.getElementById('root'));
+    </script>
+</body>
+</html>
