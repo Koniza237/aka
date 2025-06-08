@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: nodeee-app
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    repo: https://github.com/Koniza237/aka
