@@ -4,11 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" href="FARENOUNIVERSITY.jpg" type="image/x-icon">
-    <title>Tableau de Bord Étudiant - Fareno University</title>
+    <title>Messagerie - Fareno University</title>
     <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.15/babel.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         #background-image {
@@ -17,7 +16,7 @@
             animation: gradientShift 15s ease-in-out infinite;
             position: fixed;
             inset: 0;
-            z-index: 0;
+            z-index: -1;
         }
         @keyframes gradientShift {
             0% { background-position: 0% 50%; }
@@ -28,18 +27,10 @@
             position: relative;
             z-index: 10;
         }
-        .card {
-            transition: transform 0.3s ease, opacity 0.5s ease;
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        .card-animate {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        .card:hover {
-            transform: scale(1.05);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        .chat-container {
+            height: calc(100vh - 8rem);
+            display: flex;
+            flex-direction: column;
         }
         .message-bubble {
             max-width: 70%;
@@ -47,8 +38,17 @@
             margin: 5px 10px;
             border-radius: 15px;
             word-wrap: break-word;
-            background-color: #FFFFFF;
-            align-self: flex-start;
+            background-color: #DCF8C6;
+            align-self: flex-end;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background-color: #F3F4F6;
         }
         body {
             margin: 0;
@@ -59,346 +59,176 @@
 <body>
     <div id="background-image"></div>
     <div id="root"></div>
-    <div class="fixed bottom-4 right-4 text-white text-sm">01:25 AM WAT, Dimanche 08 Juin 2025</div>
 
     <script type="text/babel">
-        function StudentDashboard() {
-            const [activeSection, setActiveSection] = React.useState('messagerie');
-            const [isSidebarOpen, setIsSidebarOpen] = React.useState(false); // Masqué par défaut sur mobile
-            const [user, setUser] = React.useState(null);
+        function Messaging() {
+            const [message, setMessage] = React.useState('');
             const [messages, setMessages] = React.useState([]);
-            const [documents, setDocuments] = React.useState([]);
-            const [aiInput, setAiInput] = React.useState('');
-            const [aiResponse, setAiResponse] = React.useState('');
-            const [aiError, setAiError] = React.useState('');
-            const [aiLoading, setAiLoading] = React.useState(false);
-            const [timeSpent, setTimeSpent] = React.useState(0);
-            const [isOnline, setIsOnline] = React.useState(navigator.onLine);
+            const [isLoading, setIsLoading] = React.useState(false);
+            const [error, setError] = React.useState('');
+            const chatRef = React.useRef(null);
 
             React.useEffect(() => {
-                const fetchUserData = async () => {
-                    try {
-                        const response = await fetch('/api/users/students');
-                        if (!response.ok) throw new Error('Erreur lors du chargement de students.json');
-                        const data = await response.json();
-
-                        const storedUser = localStorage.getItem('connectstudent');
-                        let currentUser = null;
-                        if (storedUser) {
-                            const parsedUser = JSON.parse(storedUser);
-                            currentUser = data.find(
-                                (item) => (item.username === parsedUser.username || item.name === parsedUser.username) && item.password
-                            );
-                        }
-
-                        if (currentUser && currentUser.name && currentUser.group) {
-                            setUser(currentUser);
-                        } else {
-                            const firstStudent = data.find(item => item.username || item.name);
-                            if (firstStudent && firstStudent.name && firstStudent.group) {
-                                setUser(firstStudent);
-                            }
-                        }
-                    } catch (err) {
-                        console.error('Erreur lors du chargement des données utilisateur:', err);
-                    }
-                };
-
-                fetchUserData();
-
-                const startTime = Date.now();
-                const timer = setInterval(() => {
-                    const seconds = Math.floor((Date.now() - startTime) / 1000);
-                    setTimeSpent(seconds);
-                }, 1000);
-
                 fetchMessages();
-                fetchDocuments();
-
-                const handleOnline = () => setIsOnline(true);
-                const handleOffline = () => setIsOnline(false);
-                window.addEventListener('online', handleOnline);
-                window.addEventListener('offline', handleOffline);
-
-                const cards = document.querySelectorAll('.card');
-                cards.forEach((card, index) => {
-                    setTimeout(() => {
-                        card.classList.add('card-animate');
-                    }, index * 200);
-                });
-
-                return () => {
-                    clearInterval(timer);
-                    window.removeEventListener('online', handleOnline);
-                    window.removeEventListener('offline', handleOffline);
-                };
             }, []);
 
-            const formatTime = (seconds) => {
-                const hrs = Math.floor(seconds / 3600);
-                const mins = Math.floor((seconds % 3600) / 60);
-                const secs = seconds % 60;
-                return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-            };
+            React.useEffect(() => {
+                if (chatRef.current) {
+                    chatRef.current.scrollTop = chatRef.current.scrollHeight;
+                }
+            }, [messages]);
 
             const fetchMessages = async () => {
                 try {
+                    console.log('Envoi de la requête GET /api/messages');
                     const response = await fetch('/api/messages');
-                    if (!response.ok) throw new Error('Erreur lors du chargement des messages');
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
+                    }
                     const data = await response.json();
-                    const formattedMessages = data.map((msg, index) => ({
+                    // Assign index as the identifier for each message
+                    const formattedData = data.map((msg, index) => ({
                         ...msg,
-                        id: index,
-                        timestamp: msg.timestamp || new Date().toISOString()
+                        index // Use array index as the identifier
                     }));
-                    setMessages(formattedMessages);
+                    console.log('Messages reçus:', formattedData);
+                    setMessages(formattedData);
+                    setError('');
                 } catch (err) {
-                    console.error('Erreur lors du chargement des messages:', err);
-                    alert('Erreur lors du chargement des messages: ' + err.message);
+                    console.error('Erreur détaillée lors du chargement des messages:', err);
+                    setError('Impossible de charger les messages: ' + err.message);
                 }
             };
 
-            const fetchDocuments = async () => {
-                try {
-                    const response = await fetch('/api/documents');
-                    if (!response.ok) throw new Error('Erreur lors du chargement des documents');
-                    const data = await response.json();
-                    setDocuments(data);
-                } catch (err) {
-                    console.error('Erreur lors du chargement des documents:', err);
-                    alert('Erreur lors du chargement des documents: ' + err.message);
-                }
-            };
-
-            const handleLogout = async () => {
-                try {
-                    await fetch('/api/logout', { method: 'POST' });
-                    localStorage.removeItem('connectstudent');
-                    window.location.href = 'choix.html';
-                } catch (err) {
-                    console.error('Erreur lors de la déconnexion:', err);
-                }
-            };
-
-            const handleDownload = async (documentId, documentName) => {
-                try {
-                    const response = await fetch(`/api/documents/${documentId}/download`);
-                    if (!response.ok) throw new Error('Erreur lors du téléchargement');
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = documentName;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    window.URL.revokeObjectURL(url);
-                } catch (err) {
-                    console.error('Erreur lors du téléchargement:', err);
-                    alert('Erreur lors du téléchargement: ' + err.message);
-                }
-            };
-
-            const handleAiSubmit = async (e) => {
-                e.preventDefault();
-                if (!aiInput.trim()) return;
-                if (!isOnline) {
-                    setAiError('L\'IA ne peut pas répondre car vous n\'êtes pas connecté à Internet.');
+            const handleSendMessage = async (type) => {
+                if (!message.trim()) {
+                    setError('Veuillez écrire un message');
                     return;
                 }
-                setAiLoading(true);
-                setAiError('');
-                setAiResponse('');
+                setIsLoading(true);
+                setError('');
                 try {
-                    const response = await fetch('/api/ai', {
+                    const endpoint = type === 'students' ? '/api/messages-etu' : '/api/messages-ens';
+                    console.log(`Envoi du message à ${endpoint}:`, { content: message });
+                    const response = await fetch(endpoint, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ prompt: aiInput })
+                        body: JSON.stringify({ content: message })
                     });
-                    if (!response.ok) throw new Error('Erreur API');
-                    const data = await response.json();
-                    setAiResponse(data.response);
-                    setDocuments([...documents, {
-                        id: documents.length + 1,
-                        title: 'Réponse IA',
-                        category: 'Notes Internes',
-                        fileName: `reponse_ia_${Date.now()}.txt`,
-                        uploadedBy: user ? user.name : 'Étudiant',
-                        uploadDate: new Date().toISOString().slice(0, 16).replace('T', ' ')
-                    }]);
-                } catch (error) {
-                    setAiError('Erreur: ' + error.message);
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
+                    }
+                    const newMessage = await response.json();
+                    console.log('Message envoyé:', newMessage);
+                    // Add new message with index based on current messages length
+                    setMessages(prev => [...prev, { ...newMessage, index: prev.length }]);
+                    setMessage('');
+                } catch (err) {
+                    console.error('Erreur détaillée lors de l\'envoi du message:', err);
+                    setError('Impossible d\'envoyer le message: ' + err.message);
                 } finally {
-                    setAiLoading(false);
+                    setIsLoading(false);
                 }
             };
 
-            const sections = {
-                messagerie: (
-                    <div className="p-6">
-                        <h2 className="text-2xl font-bold mb-4">Messagerie 💬</h2>
-                        <div className="chat-area bg-gray-100 p-6 rounded-lg shadow-md h-[calc(100vh-12rem)] overflow-y-auto">
+            const handleDeleteMessage = async (index, type) => {
+                setIsLoading(true);
+                setError('');
+                try {
+                    const endpoint = `/api/messages/${type}/${index}`;
+                    console.log(`Suppression du message à ${endpoint}`);
+                    const response = await fetch(endpoint, {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
+                    }
+                    console.log('Message supprimé:', { index, type });
+                    // Remove message by index
+                    setMessages(prev => prev.filter(msg => msg.index !== index));
+                } catch (err) {
+                    console.error('Erreur détaillée lors de la suppression du message:', err);
+                    setError('Impossible de supprimer le message: ' + err.message);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            const handleKeyPress = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    // Ne rien faire ici, l'envoi se fait via les boutons
+                }
+            };
+
+            return (
+                <div className="flex min-h-screen flex-col">
+                    <div className="p-4 bg-white border-b border-gray-300 flex justify-between items-center">
+                        <h2 className="text-xl font-bold">Messagerie 💬</h2>
+                        <a href="dashboard.html" className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Retour</a>
+                    </div>
+                    <div className="flex-1 flex flex-col chat-container">
+                        <div className="chat-area" ref={chatRef}>
                             {messages.length > 0 ? (
-                                messages.map(msg => (
-                                    <div key={msg.id} className="message-bubble">
+                                messages.map((msg) => (
+                                    <div key={msg.index} className="message-bubble">
                                         <div>{msg.content}</div>
                                         <div className="text-xs text-gray-500 mt-1">
-                                            Reçu le {new Date(msg.timestamp).toLocaleString('fr-FR')}
+                                            Envoyé à {msg.type === 'students' ? 'Étudiants' : 'Enseignants'} le {new Date(msg.timestamp).toLocaleString('fr-FR')}
                                         </div>
+                                        <button
+                                            className="bg-red-500 text-white px-2 py-1 rounded-lg hover:bg-red-600 text-xs mt-2"
+                                            onClick={() => handleDeleteMessage(msg.index, msg.type)}
+                                            disabled={isLoading}
+                                        >
+                                            Supprimer
+                                        </button>
                                     </div>
                                 ))
                             ) : (
                                 <div className="text-center text-gray-500 mt-4">
-                                    Aucun message reçu.
+                                    Aucun message envoyé.
                                 </div>
                             )}
                         </div>
-                    </div>
-                ),
-                documents: (
-                    <div className="p-6">
-                        <h2 className="text-2xl font-bold mb-4">Documents 📄</h2>
-                        <div className="mt-4">
-                            <h3 className="text-lg font-semibold mb-2">Liste des Documents</h3>
-                            <table className="w-full bg-white rounded-lg shadow-md">
-                                <thead>
-                                    <tr className="bg-blue-500 text-white">
-                                        <th className="p-3 text-left">Titre</th>
-                                        <th className="p-3 text-left">Catégorie</th>
-                                        <th className="p-3 text-left">Nom du Fichier</th>
-                                        <th className="p-3 text-left">Ajouté par</th>
-                                        <th className="p-3 text-left">Date d'Ajout</th>
-                                        <th className="p-3 text-left">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {documents.length > 0 ? (
-                                        documents.map(doc => (
-                                            <tr key={doc.id} className="border-b">
-                                                <td className="p-3">{doc.title}</td>
-                                                <td className="p-3">{doc.category}</td>
-                                                <td className="p-3">{doc.fileName}</td>
-                                                <td className="p-3">{doc.uploadedBy}</td>
-                                                <td className="p-3">{doc.uploadDate}</td>
-                                                <td className="p-3">
-                                                    <button
-                                                        className="bg-green-500 text-white px-4 py-1 rounded hover:bg-green-600"
-                                                        onClick={() => handleDownload(doc.id, doc.fileName)}
-                                                    >
-                                                        Télécharger
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan="6" className="p-3 text-center text-gray-500">
-                                                Aucun document disponible
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                ),
-                ai: (
-                    <div className="p-6">
-                        <h2 className="text-2xl font-bold mb-4">Assistant IA 🤖</h2>
-                        <form onSubmit={handleAiSubmit}>
-                            <textarea
-                                name="text"
-                                placeholder="Posez une question..."
-                                className="border p-2 rounded w-full h-32 resize-none bg-gray-100 text-gray-800"
-                                value={aiInput}
-                                onChange={(e) => setAiInput(e.target.value)}
-                            />
-                            <button
-                                type="submit"
-                                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mt-4"
-                                disabled={aiLoading}
-                            >
-                                {aiLoading ? 'Chargement...' : 'Envoyer'}
-                            </button>
-                        </form>
-                        {aiResponse && (
-                            <div className="mt-4 bg-green-50 p-4 rounded-lg">
-                                <h3 className="text-lg font-semibold text-green-600">Réponse:</h3>
-                                <p>{aiResponse}</p>
-                            </div>
-                        )}
-                        {aiError && (
-                            <div className="mt-4 bg-red-50 p-4 rounded-lg">
-                                <h3 className="text-lg font-semibold text-red-600">Erreur:</h3>
-                                <p>{aiError}</p>
-                            </div>
-                        )}
-                    </div>
-                )
-            };
-
-            const handleAideClick = () => {
-                window.location.href = 'aideetu.html';
-            };
-
-            return (
-                <div className="flex min-h-screen">
-                    <div className={`sidebar bg-gray-800 text-white w-64 space-y-6 py-7 px-2 fixed inset-y-0 left-0 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 transition duration-200 ease-in-out z-20`}>
-                        <h1 className="text-2xl font-bold text-center">Fareno University</h1>
-                        <nav>
-                            {['messagerie', 'documents', 'ai'].map(section => (
+                        <div className="p-4 bg-white border-t border-gray-300">
+                            <div className="flex items-center space-x-2">
+                                <textarea
+                                    placeholder="Écrivez un message..."
+                                    className="flex-1 border p-2 rounded-lg h-12 resize-none focus:outline-none"
+                                    value={message}
+                                    onChange={(e) => setMessage(e.target.value)}
+                                    onKeyPress={handleKeyPress}
+                                />
                                 <button
-                                    key={section}
-                                    className={`w-full text-left py-2.5 px-4 rounded transition duration-200 hover:bg-blue-700 ${activeSection === section ? 'bg-blue-700' : ''}`}
-                                    onClick={() => {
-                                        setActiveSection(section);
-                                        if (window.innerWidth < 768) setIsSidebarOpen(false); // Masquer la sidebar sur mobile après clic
-                                    }}
+                                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                                    onClick={() => handleSendMessage('students')}
+                                    disabled={isLoading}
                                 >
-                                    {section === 'messagerie' ? 'Messagerie 💬' :
-                                     section === 'documents' ? 'Documents 📄' :
-                                     'Assistant IA 🤖'}
+                                    {isLoading ? 'Envoi...' : 'À Étudiants'}
                                 </button>
-                            ))}
-                            <button
-                                className={`w-full text-left py-2.5 px-4 rounded transition duration-200 hover:bg-blue-700 ${activeSection === 'aide' ? 'bg-blue-700' : ''}`}
-                                onClick={() => {
-                                    handleAideClick();
-                                    if (window.innerWidth < 768) setIsSidebarOpen(false); // Masquer la sidebar sur mobile après clic
-                                }}
-                            >
-                                Aide ❓
-                            </button>
-                            <button
-                                className="w-full text-left py-2.5 px-4 rounded transition bg-red-600 hover:bg-red-500"
-                                onClick={() => {
-                                    handleLogout();
-                                    if (window.innerWidth < 768) setIsSidebarOpen(false); // Masquer la sidebar sur mobile après clic
-                                }}
-                            >
-                                Déconnexion 🚪
-                            </button>
-                        </nav>
-                    </div>
-                    <div className="flex-1 flex flex-col">
-                        <header className="bg-white shadow-md p-4 flex justify-between items-center">
-                            <div className="flex items-center">
-                                <button className="md:hidden text-gray-800 focus:outline-none" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                                    </svg>
+                                <button
+                                    className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
+                                    onClick={() => handleSendMessage('teachers')}
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? 'Envoi...' : 'À Enseignants'}
                                 </button>
-                                <h1 className="text-xl font-bold ml-4">Tableau de Bord Étudiant</h1>
                             </div>
-                            <div>Temps passé : {formatTime(timeSpent)}</div>
-                        </header>
-                        <main className="flex-1 p-4">{sections[activeSection]}</main>
+                            {error && (
+                                <div className="mt-2 text-red-600 text-sm">{error}</div>
+                            )}
+                        </div>
                     </div>
                 </div>
             );
         }
 
-        ReactDOM.render(<StudentDashboard />, document.getElementById('root'));
+        ReactDOM.render(<Messaging />, document.getElementById('root'));
     </script>
 </body>
 </html>
