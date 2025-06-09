@@ -25,7 +25,8 @@ async function readJson(file) {
         return JSON.parse(data);
     } catch (err) {
         if (err.code === 'ENOENT') {
-            console.log(`Fichier ${file} non trouvé, retour d'un tableau vide`);
+            console.log(`Fichier ${file} non trouvé, création d'un tableau vide`);
+            await writeJson(file, []);
             return [];
         }
         console.error(`Erreur lors de la lecture de ${file}:`, err.message);
@@ -54,11 +55,11 @@ const fileMap = {
     documents: 'documents.json'
 };
 
-// Créer les dossiers nécessaires
-const emploitDir = path.join(__dirname, 'emploit');
+// Créer les dossiers nécessaires (utiliser /var/data pour Render avec disque persistant)
+const emploitDir = path.join('/var/data', 'emploit');
 fs.mkdir(emploitDir, { recursive: true }).catch(err => console.error('Erreur lors de la création du dossier emploit:', err));
 
-const uploadsDir = path.join(__dirname, 'Uploads');
+const uploadsDir = path.join('/var/data', 'Uploads');
 fs.mkdir(uploadsDir, { recursive: true }).catch(err => console.error('Erreur lors de la création du dossier uploads:', err));
 
 // Configuration de multer pour l'upload des fichiers
@@ -669,4 +670,4 @@ app.use((req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Serveur démarré sur http://localhost:${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`Serveur démarré sur http://0.0.0.0:${PORT}`));
